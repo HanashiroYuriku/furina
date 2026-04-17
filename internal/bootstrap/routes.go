@@ -21,28 +21,26 @@ func SetupRoutes(app *fiber.App, cfg *config.Config, db *gorm.DB) {
 		},
 	}))
 
-	// Health Check
+	// === Health Check
 	healthHandler := http.NewHealthCheckHandler(cfg, db)
-	// health route
+	// --- health route
 	app.Get("/health", healthHandler.Check)
 	// ---
 
-	// === User Handler ===
-	userHandler := BuildUserHandler(db)
+	// === Handler ===
+	handler := BuildAllDependencies(db, cfg)
 
-	// --- Register User ---
-	app.Post("/register", userHandler.RegisterUser)
+	// === auth
+	authGroup := app.Group("/auth")
+	// --- register
+	authGroup.Post("/register", handler.Auth.RegisterUser)
+	// --- resend verif
+	authGroup.Post("/resend-verification", handler.Auth.ResendVerification)
+	// --- verify email
+	authGroup.Get("/verify", handler.Auth.VerifyEmail)
 
 	// version & auth
 	apiApp := app.Group("/api/v1")
 	auth := apiApp.Group("/", middleware.RequireAuth(cfg))
 	_ = auth
-
-	// User and Admin routes
-	// userArea := auth.Group("/user", middleware.OnlyRole("user", "admin"))
-
-	// user
-	// userHandler := BuildUserHandler(db)
-
-	// userArea.Get("/profile", userHandler.GetProfile)
 }
