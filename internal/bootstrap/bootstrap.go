@@ -10,6 +10,7 @@ import (
 
 	"be-ayaka/config"
 	"be-ayaka/internal/adapter/database"
+	"be-ayaka/internal/middleware"
 	ayaka "be-ayaka/pkg/logger"
 	"be-ayaka/pkg/validator"
 
@@ -31,6 +32,7 @@ func Run(cfg *config.Config) {
 		ReadTimeout:           10 * time.Second,
 		WriteTimeout:          10 * time.Second,
 		DisableStartupMessage: true,
+		ErrorHandler:          middleware.GlobalErrorHandler,
 	})
 	SetupRoutes(app, cfg, db)
 
