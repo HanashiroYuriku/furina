@@ -11,6 +11,8 @@ const (
 	Unauthorized        Status = "UNAUTHORIZED"
 	Forbidden           Status = "FORBIDDEN"
 	BadRequest          Status = "BAD_REQUEST"
+	TooManyRequests     Status = "TOO_MANY_REQUESTS"
+	UnprocessableEntity Status = "UNPROCESSABLE_ENTITY"
 )
 
 func (s Status) String() string {
