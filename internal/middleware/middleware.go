@@ -6,6 +6,7 @@ import (
 	"be-ayaka/config"
 	customjwt "be-ayaka/pkg/jwt"
 	"be-ayaka/pkg/response"
+	"be-ayaka/pkg/utils"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/golang-jwt/jwt/v5"
@@ -13,11 +14,7 @@ import (
 
 func RequireAuth(cfg *config.Config) fiber.Handler {
 	return func(c *fiber.Ctx) error {
-		requestId, ok := c.Locals("request_id").(string)
-
-		if !ok {
-			requestId = c.Get("X-Request-ID", "unknown-request-id")
-		}
+		requestId := utils.GetRequestID(c)
 
 		authHeader := c.Get("Authorization")
 
