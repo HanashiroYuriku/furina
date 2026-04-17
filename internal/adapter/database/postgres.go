@@ -38,6 +38,7 @@ func NewPostgresConnection(cfg *config.Config) *gorm.DB {
 	// auto migrate
 	err = db.AutoMigrate(
 		&entity.User{},
+		&entity.UserVerification{},
 		// add other table
 	)
 
