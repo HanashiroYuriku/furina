@@ -38,8 +38,10 @@ func SetupRoutes(app *fiber.App, cfg *config.Config, db *gorm.DB) {
 	authGroup.Post("/resend-verification", handler.Auth.ResendVerification)
 	// --- verify email
 	authGroup.Get("/verify", handler.Auth.VerifyEmail)
+	// --- login
+	authGroup.Post("/login", handler.Auth.Login)
 
-	// version & auth
+	// version & auth require
 	apiApp := app.Group("/api/v1")
 	auth := apiApp.Group("/", middleware.RequireAuth(cfg))
 	_ = auth
