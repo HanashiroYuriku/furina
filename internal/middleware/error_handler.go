@@ -14,16 +14,16 @@ func GlobalErrorHandler(c *fiber.Ctx, err error) error {
 
 	var valErr *customerrors.ValidationError
 
-    if errors.As(err, &valErr) {
-        return c.Status(fiber.StatusUnprocessableEntity).JSON(
-            response.NewErrorFieldResponse(
-                response.UnprocessableEntity,
-                valErr.Error(),
-                valErr.Detail,
-                requestId,
-            ),
-        )
-    }
+	if errors.As(err, &valErr) {
+		return c.Status(fiber.StatusUnprocessableEntity).JSON(
+			response.NewErrorFieldResponse(
+				response.UnprocessableEntity,
+				valErr.Error(),
+				valErr.Detail,
+				requestId,
+			),
+		)
+	}
 
 	code := fiber.StatusInternalServerError
 	statusString := response.InternalServerError
@@ -65,6 +65,21 @@ func GlobalErrorHandler(c *fiber.Ctx, err error) error {
 	case errors.Is(err, customerrors.ErrTokenExpired):
 		code = fiber.StatusUnauthorized
 		statusString = response.Unauthorized
+		message = err.Error()
+
+	case errors.Is(err, customerrors.ErrInvalidCredentials):
+		code = fiber.StatusUnauthorized
+		statusString = response.Unauthorized
+		message = err.Error()
+
+	case errors.Is(err, customerrors.ErrAccountInactive):
+		code = fiber.StatusUnauthorized
+		statusString = response.Unauthorized
+		message = err.Error()
+
+	case errors.Is(err, customerrors.ErrAccountAlreadyVerified):
+		code = fiber.StatusConflict
+		statusString = response.DataConflict
 		message = err.Error()
 	}
 
