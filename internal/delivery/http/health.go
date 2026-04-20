@@ -3,6 +3,7 @@ package http
 import (
 	"be-ayaka/config"
 	ayaka "be-ayaka/pkg/logger"
+	"be-ayaka/pkg/utils"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
@@ -22,7 +23,9 @@ func NewHealthCheckHandler(cfg *config.Config, db *gorm.DB) *HealthCheckHandler 
 }
 
 func (h *HealthCheckHandler) Check(c *fiber.Ctx) error {
-	go ayaka.Log("SYSTEM", "INFO", "Ayaka Server is running")
+	requestId := utils.GetRequestID(c)
+	go ayaka.Log("SYSTEM", "INFO", "Ayaka Server is running", requestId)
+	
 	appStatus := "UP"
 	dbStatus := "UP"
 	httpCode := fiber.StatusOK

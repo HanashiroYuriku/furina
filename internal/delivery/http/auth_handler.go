@@ -31,21 +31,21 @@ func (h *AuthHandler) RegisterUser(c *fiber.Ctx) error {
 	var request entity.UserRequest
 
 	if err := c.BodyParser(&request); err != nil {
-		go logger.Log("SYSTEM", "ERROR", "Failed to parse request body: "+err.Error())
+		go logger.Log("SYSTEM", "ERROR", "Failed to parse request body: "+err.Error(), requestId)
 		return customerrors.ErrBadRequest
 	}
 
 	if err := h.validator.Validate(c.Context(), &request); err != nil {
-		go logger.Log("SYSTEM", "WARN", "Validation failed: "+err.Error())
+		go logger.Log("SYSTEM", "WARN", "Validation failed: "+err.Error(), requestId)
 		return customerrors.NewValidationError(err.Error())
 	}
 
 	if err := h.authService.Create(&request); err != nil {
-		go logger.Log("SYSTEM", "ERROR", "Internal Server Error: "+err.Error())
+		go logger.Log("SYSTEM", "ERROR", "Internal Server Error: "+err.Error(), requestId)
 		return err
 	}
 
-	go logger.Log("SYSTEM", "INFO", fmt.Sprintf("User %s created successfully", request.Username))
+	go logger.Log("SYSTEM", "INFO", fmt.Sprintf("User %s created successfully", request.Username), requestId)
 	return c.Status(fiber.StatusOK).JSON(
 		response.NewSuccessResponse(
 			response.StatusSuccess,
@@ -61,21 +61,21 @@ func (h *AuthHandler) ResendVerification(c *fiber.Ctx) error {
 
 	var email entity.UserVerificationRequest
 	if err := c.BodyParser(&email); err != nil {
-		go logger.Log("SYSTEM", "ERROR", "Failed to parse request body: "+err.Error())
+		go logger.Log("SYSTEM", "ERROR", "Failed to parse request body: "+err.Error(), requestId)
 		return customerrors.ErrBadRequest
 	}
 
 	if err := h.validator.Validate(c.Context(), &email); err != nil {
-		go logger.Log("SYSTEM", "WARN", "Validation failed: "+err.Error())
+		go logger.Log("SYSTEM", "WARN", "Validation failed: "+err.Error(), requestId)
 		return customerrors.NewValidationError(err.Error())
 	}
 
 	if err := h.authService.ResendVerification(email.Email); err != nil {
-		go logger.Log("SYSTEM", "ERROR", "Internal Server Error: "+err.Error())
+		go logger.Log("SYSTEM", "ERROR", "Internal Server Error: "+err.Error(), requestId)
 		return err
 	}
 
-	go logger.Log("SYSTEM", "INFO", fmt.Sprintf("Verification email resent to %s successfully", email.Email))
+	go logger.Log("SYSTEM", "INFO", fmt.Sprintf("Verification email resent to %s successfully", email.Email), requestId)
 	return c.Status(fiber.StatusOK).JSON(
 		response.NewSuccessResponse(
 			response.StatusSuccess,
@@ -91,16 +91,16 @@ func (h *AuthHandler) VerifyEmail(c *fiber.Ctx) error {
 
 	token := c.Query("token")
 	if token == "" {
-		go logger.Log("SYSTEM", "WARN", "Token query parameter is missing")
+		go logger.Log("SYSTEM", "WARN", "Token query parameter is missing", requestId)
 		return customerrors.ErrBadRequest
 	}
 
 	if err := h.authService.VerifyUser(token); err != nil {
-		go logger.Log("SYSTEM", "ERROR", "Verification failed for token "+token+": "+err.Error())
+		go logger.Log("SYSTEM", "ERROR", "Verification failed for token "+token+": "+err.Error(), requestId)
 		return err
 	}
 
-	go logger.Log("SYSTEM", "INFO", "User email verified successfully")
+	go logger.Log("SYSTEM", "INFO", "User email verified successfully", requestId)
 	return c.Status(fiber.StatusOK).JSON(
 		response.NewSuccessResponse(
 			response.StatusSuccess,
@@ -109,4 +109,32 @@ func (h *AuthHandler) VerifyEmail(c *fiber.Ctx) error {
 			requestId,
 		),
 	)
+}
+
+func (h *AuthHandler) Login(c *fiber.Ctx) error {
+	requestId := utils.GetRequestID(c)
+
+	var request entity.LoginRequest
+	if err := c.BodyParser(&request); err != nil {
+		go logger.Log("SYSTEM", "ERROR", "Failed to parse request body: "+err.Error(), requestId)
+		return customerrors.ErrBadRequest
+	}
+
+	if err := h.validator.Validate(c.Context(), &request); err != nil {
+		go logger.Log("SYSTEM", "WARN", "Validation failed: "+err.Error(), requestId)
+		return err
+	}
+
+	res, err := h.authService.Login(request.EmailUsername, request.Password, requestId)
+	if err != nil {
+		go logger.Log("SYSTEM", "ERROR", "Login failed for user "+request.EmailUsername+": "+err.Error(), requestId)
+		return err
+	}
+
+	return c.Status(fiber.StatusOK).JSON(response.NewSuccessResponse(
+		response.StatusSuccess,
+		"Login Success",
+		res,
+		requestId,
+	))
 }

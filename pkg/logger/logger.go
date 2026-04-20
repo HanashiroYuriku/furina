@@ -2,6 +2,7 @@ package logger
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"log/slog"
 	"os"
@@ -67,8 +68,9 @@ func SetUp(cfg *config.Config) {
 }
 
 // custom log for ayaka
-func Log(userID string, levelStr string, message string) {
+func Log(userID string, levelStr string, message string, requestId string) {
 	var level slog.Level
+	messageStr := fmt.Sprintf("[Request ID: %s] %s", requestId, message)
 	
 	switch strings.ToUpper(levelStr) {
 		case "DEBUG":
@@ -89,7 +91,7 @@ func Log(userID string, levelStr string, message string) {
 	runtime.Callers(2, pcs[:])
 
 	// create a log record with caller info and user ID
-	record := slog.NewRecord(time.Now(), level, message, pcs[0])
+	record := slog.NewRecord(time.Now(), level, messageStr, pcs[0])
 
 	if userID != "" {
 		record.AddAttrs(slog.String("user_id", userID))
