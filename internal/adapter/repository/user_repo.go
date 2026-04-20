@@ -31,12 +31,12 @@ func (r *userRepoPostgres) FindByID(id string) (*entity.User, error) {
 	return &user, nil
 }
 
-func (r *userRepoPostgres) FindByEmailUsername(value string) (*entity.UserResponse, error) {
-	var user entity.UserResponse
+func (r *userRepoPostgres) FindByEmailUsername(value string) (*entity.User, error) {
+	var user entity.User
 	err := r.db.Where("email = ? OR username = ?", value, value).First(&user).Error
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, nil
+			return nil, customerrors.ErrInvalidCredentials
 		}
 		return nil, err
 	}
@@ -49,4 +49,8 @@ func (r *userRepoPostgres) Create(user *entity.User) error {
 
 func (r *userRepoPostgres) VerifUser(id string) error {
 	return r.db.Model(&entity.User{}).Where("id = ?", id).Update("is_verified", true).Error
+}
+
+func (r *userRepoPostgres) UpdateRefreshToken(id string, token string) error {
+	return r.db.Model(&entity.User{}).Where("id = ?", id).Update("refresh_token", token).Error
 }
