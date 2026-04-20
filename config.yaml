@@ -21,8 +21,10 @@ database:
   name: ${DATABASE_NAME:ayaka_db}
 
 jwt:
-  secret: ${JWT_SECRET:"secret_default"}
-  expired: ${JWT_EXPIRED:24}
+  secret: ${JWT_ACCESS_SECRET:"secret_default"}
+  expired: ${JWT_ACCESS_EXPIRED:24}
+  refresh_secret: ${JWT_REFRESH_SECRET:"refresh_secret_default"}
+  refresh_expired: ${JWT_REFRESH_EXPIRED:1440}
 
 frontend:
   url: ${FRONTEND_URL:"http://localhost:3000"}
