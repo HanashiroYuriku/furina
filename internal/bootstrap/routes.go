@@ -2,12 +2,14 @@ package bootstrap
 
 import (
 	"be-ayaka/config"
+	_ "be-ayaka/docs"
 	"be-ayaka/internal/delivery/http"
 	"be-ayaka/internal/middleware"
-	"be-ayaka/pkg/utils"
+	"be-ayaka/pkg/generate_id"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/requestid"
+	"github.com/gofiber/swagger"
 	"gorm.io/gorm"
 )
 
@@ -15,11 +17,14 @@ func SetupRoutes(app *fiber.App, cfg *config.Config, db *gorm.DB) {
 	// middleware request
 	app.Use(requestid.New(requestid.Config{
 		Header:     fiber.HeaderXRequestID,
-		ContextKey: "request_id",
+		ContextKey: "requestid",
 		Generator: func() string {
-			return utils.GenerateID("REQUEST")
+			return generateid.GenerateID("REQUEST")
 		},
 	}))
+
+	// === Swagger UI
+	app.Get("/swagger/*", swagger.HandlerDefault)
 
 	// === Health Check
 	healthHandler := http.NewHealthCheckHandler(cfg, db)
@@ -30,8 +35,14 @@ func SetupRoutes(app *fiber.App, cfg *config.Config, db *gorm.DB) {
 	// === Handler ===
 	handler := BuildAllDependencies(db, cfg)
 
-	// === auth
-	authGroup := app.Group("/auth")
+	// === api app group
+	apiApp := app.Group("/api")
+
+	// === version 1
+	apiV1 := apiApp.Group("/v1")
+
+	// === auth group
+	authGroup := apiV1.Group("/auth")
 	// --- register
 	authGroup.Post("/register", handler.Auth.RegisterUser)
 	// --- resend verif
@@ -40,9 +51,10 @@ func SetupRoutes(app *fiber.App, cfg *config.Config, db *gorm.DB) {
 	authGroup.Get("/verify", handler.Auth.VerifyEmail)
 	// --- login
 	authGroup.Post("/login", handler.Auth.Login)
+	// --- refresh token
+	authGroup.Post("/refresh", handler.Auth.RefreshToken)
 
-	// version & auth require
-	apiApp := app.Group("/api/v1")
-	auth := apiApp.Group("/", middleware.RequireAuth(cfg))
-	_ = auth
+	// auth required
+	authApp := apiApp.Group("/", middleware.RequireAuth(cfg))
+	_ = authApp
 }
