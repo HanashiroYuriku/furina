@@ -5,8 +5,8 @@ import (
 	"be-ayaka/internal/core/entity"
 	"be-ayaka/internal/core/service"
 	"be-ayaka/pkg/logger"
+	requestid "be-ayaka/pkg/request_id"
 	"be-ayaka/pkg/response"
-	"be-ayaka/pkg/utils"
 	"be-ayaka/pkg/validator"
 	"fmt"
 
@@ -25,8 +25,19 @@ func NewAuthHandler(authService service.AuthService, validator validator.Validat
 	}
 }
 
+// RegisterUser register new user
+// @Summary Register new User
+// @Description Register new user using email, username, and password
+// @Tags Authentication
+// @Accept json
+// @Produce json
+// @Param request body entity.UserRequest true "Payload Register"
+// @Success 200 {object} response.Response{data=entity.UserResponse}
+// @Failure 400 {object} response.Response
+// @Failure 422 {object} response.Response "Validation Failed"
+// @Router /api/v1/auth/register [post]
 func (h *AuthHandler) RegisterUser(c *fiber.Ctx) error {
-	requestId := utils.GetRequestID(c)
+	requestId := requestid.GetRequestID(c)
 
 	var request entity.UserRequest
 
@@ -37,16 +48,16 @@ func (h *AuthHandler) RegisterUser(c *fiber.Ctx) error {
 
 	if err := h.validator.Validate(c.Context(), &request); err != nil {
 		go logger.Log("SYSTEM", "WARN", "Validation failed: "+err.Error(), requestId)
-		return customerrors.NewValidationError(err.Error())
+		return err
 	}
 
-	if err := h.authService.Create(&request); err != nil {
+	if err := h.authService.Create(c.Context(), &request); err != nil {
 		go logger.Log("SYSTEM", "ERROR", "Internal Server Error: "+err.Error(), requestId)
 		return err
 	}
 
 	go logger.Log("SYSTEM", "INFO", fmt.Sprintf("User %s created successfully", request.Username), requestId)
-	return c.Status(fiber.StatusOK).JSON(
+	return c.Status(fiber.StatusCreated).JSON(
 		response.NewSuccessResponse(
 			response.StatusSuccess,
 			"Success Create User",
@@ -56,8 +67,20 @@ func (h *AuthHandler) RegisterUser(c *fiber.Ctx) error {
 	)
 }
 
+// ResendVerification resend verification email to user
+// @Summary Resend new verification email to user
+// @Description Resend new email verification to user using email after user failed to receive or expired token
+// @Tags Authentication
+// @Accept json
+// @Produce json
+// @Param request body entity.UserVerificationRequest true "Payload Email Verification"
+// @Success 200 {object} response.Response{data=nil}
+// @Failure 400 {object} response.Response
+// @Failure 422 {object} response.Response "Validation Failed"
+// @Failure 404 {object} response.Response "Data Not Found"
+// @Router /api/v1/auth/resend-verification [post]
 func (h *AuthHandler) ResendVerification(c *fiber.Ctx) error {
-	requestId := utils.GetRequestID(c)
+	requestId := requestid.GetRequestID(c)
 
 	var email entity.UserVerificationRequest
 	if err := c.BodyParser(&email); err != nil {
@@ -67,10 +90,10 @@ func (h *AuthHandler) ResendVerification(c *fiber.Ctx) error {
 
 	if err := h.validator.Validate(c.Context(), &email); err != nil {
 		go logger.Log("SYSTEM", "WARN", "Validation failed: "+err.Error(), requestId)
-		return customerrors.NewValidationError(err.Error())
+		return err
 	}
 
-	if err := h.authService.ResendVerification(email.Email); err != nil {
+	if err := h.authService.ResendVerification(c.Context(), email.Email); err != nil {
 		go logger.Log("SYSTEM", "ERROR", "Internal Server Error: "+err.Error(), requestId)
 		return err
 	}
@@ -86,8 +109,20 @@ func (h *AuthHandler) ResendVerification(c *fiber.Ctx) error {
 	)
 }
 
+// VerifyEmail verify user's email
+// @Summary verify user's email
+// @Description verifies user's email using token from email verif link and activate the account
+// @Tags Authentication
+// @Produce json
+// @Param token query string true "Verify Email Token"
+// @Success 200 {object} response.Response
+// @Failure 400 {object} response.Response
+// @Failure 401 {object} response.Response "Unauthorized/Token Expired"
+// @Failure 409 {object} response.Response "Data Conflict"
+// @Failure 404 {object} response.Response "Data Not Found"
+// @Router /api/v1/auth/verify [get]
 func (h *AuthHandler) VerifyEmail(c *fiber.Ctx) error {
-	requestId := utils.GetRequestID(c)
+	requestId := requestid.GetRequestID(c)
 
 	token := c.Query("token")
 	if token == "" {
@@ -95,7 +130,7 @@ func (h *AuthHandler) VerifyEmail(c *fiber.Ctx) error {
 		return customerrors.ErrBadRequest
 	}
 
-	if err := h.authService.VerifyUser(token); err != nil {
+	if err := h.authService.VerifyUser(c.Context(), token); err != nil {
 		go logger.Log("SYSTEM", "ERROR", "Verification failed for token "+token+": "+err.Error(), requestId)
 		return err
 	}
@@ -111,8 +146,20 @@ func (h *AuthHandler) VerifyEmail(c *fiber.Ctx) error {
 	)
 }
 
+// Login authenticate user and generate jwt tokens
+// @Summary Login User
+// @Description Login using email or username and password and receive access & refresh tokens
+// @Tags Authentication
+// @Accept json
+// @Produce json
+// @Param request body entity.LoginRequest true "Payload Login"
+// @Success 200 {object} response.Response
+// @Failure 400 {object} response.Response
+// @Failure 422 {object} response.Response "Validation Failed"
+// @Failure 404 {object} response.Response "Email/username does not exist"
+// @Router /api/v1/auth/login [post]
 func (h *AuthHandler) Login(c *fiber.Ctx) error {
-	requestId := utils.GetRequestID(c)
+	requestId := requestid.GetRequestID(c)
 
 	var request entity.LoginRequest
 	if err := c.BodyParser(&request); err != nil {
@@ -125,7 +172,7 @@ func (h *AuthHandler) Login(c *fiber.Ctx) error {
 		return err
 	}
 
-	res, err := h.authService.Login(request.EmailUsername, request.Password, requestId)
+	res, err := h.authService.Login(c.Context(), request.EmailUsername, request.Password, requestId)
 	if err != nil {
 		go logger.Log("SYSTEM", "ERROR", "Login failed for user "+request.EmailUsername+": "+err.Error(), requestId)
 		return err
@@ -134,6 +181,40 @@ func (h *AuthHandler) Login(c *fiber.Ctx) error {
 	return c.Status(fiber.StatusOK).JSON(response.NewSuccessResponse(
 		response.StatusSuccess,
 		"Login Success",
+		res,
+		requestId,
+	))
+}
+
+// RefreshToken refresh user's access token
+// @Summary Refresh Access Token
+// @Description Refresh access token using valid refresh token
+// @Tags Authentication
+// @Accept json
+// @Produce json
+// @Param request body entity.TokenRequest true "Payload Token Refresh"
+// @Success 200 {object} response.Response
+// @Failure 400 {object} response.Response
+// @Failure 401 {object} response.Response "Unauthorized/Token Expired"
+// @Router /api/v1/auth/refresh [post]
+func (h *AuthHandler) RefreshToken(c *fiber.Ctx) error {
+	requestId := requestid.GetRequestID(c)
+
+	var request entity.TokenRequest
+	if err := c.BodyParser(&request); err != nil {
+		go logger.Log("SYSTEM", "ERROR", "Failed to parse request body: "+err.Error(), requestId)
+		return customerrors.ErrBadRequest
+	}
+
+	res, err := h.authService.NewAccessToken(c.Context(), request.RefreshToken, requestId)
+	if err != nil {
+		go logger.Log("SYSTEM", "ERROR", "Failed to refresh token: "+err.Error(), requestId)
+		return err
+	}
+
+	return c.Status(fiber.StatusOK).JSON(response.NewSuccessResponse(
+		response.StatusSuccess,
+		"Token Refreshed Successfully",
 		res,
 		requestId,
 	))
