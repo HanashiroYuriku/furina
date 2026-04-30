@@ -5,10 +5,11 @@ import (
 	"be-ayaka/internal/core/customerrors"
 	"be-ayaka/internal/core/entity"
 	"be-ayaka/internal/core/port"
+	generateid "be-ayaka/pkg/generate_id"
 	"be-ayaka/pkg/hash"
 	"be-ayaka/pkg/jwt"
 	"be-ayaka/pkg/logger"
-	"be-ayaka/pkg/utils"
+	"context"
 	"errors"
 	"fmt"
 	"net/url"
@@ -16,10 +17,11 @@ import (
 )
 
 type AuthService interface {
-	Create(user *entity.UserRequest) error
-	ResendVerification(email string) error
-	VerifyUser(token string) error
-	Login(emailUsername, password, requestId string) (*entity.LoginResponse, error)
+	Create(ctx context.Context, user *entity.UserRequest) error
+	ResendVerification(ctx context.Context, email string) error
+	VerifyUser(ctx context.Context, token string) error
+	Login(ctx context.Context, emailUsername, password, requestId string) (*entity.LoginResponse, error)
+	NewAccessToken(ctx context.Context, refreshToken, requestId string) (*entity.TokenResponse, error)
 }
 
 type authServiceImpl struct {
@@ -28,42 +30,49 @@ type authServiceImpl struct {
 	authRepo     port.UserVerificationRepository
 	emailAdapter port.EmailSender
 	config       *config.Config
+	txManager    port.TxManager
 }
 
-func NewAuthService(repo port.UserRepository, hashService hash.HashService, authRepo port.UserVerificationRepository, emailAdapter port.EmailSender, cfg *config.Config) AuthService {
+func NewAuthService(repo port.UserRepository, hashService hash.HashService, authRepo port.UserVerificationRepository, emailAdapter port.EmailSender, cfg *config.Config, txManager port.TxManager) AuthService {
 	return &authServiceImpl{
 		userRepo:     repo,
 		hashService:  hashService,
 		authRepo:     authRepo,
 		emailAdapter: emailAdapter,
 		config:       cfg,
+		txManager:    txManager,
 	}
 }
 
-func (s *authServiceImpl) Create(user *entity.UserRequest) error {
+func (s *authServiceImpl) Create(ctx context.Context, user *entity.UserRequest) error {
 	passwordHash, err := s.hashService.HashPassword(user.Password)
 	if err != nil {
 		return errors.New("Failed to hash Password")
 	}
 
 	userModel := &entity.User{
-		ID:       utils.GenerateID("USER"),
 		Username: user.Username,
 		Email:    user.Email,
 		Password: passwordHash,
 		Role:     "user",
 	}
+	userModel.ID = generateid.GenerateID("USER")
 
-	if err := s.userRepo.Create(userModel); err != nil {
-		return err
-	}
+	return s.txManager.WithTx(ctx, func(ctx context.Context) error {
+		if err := s.userRepo.Create(ctx, userModel); err != nil {
+			return err
+		}
 
-	go s.generateAndSendVerif(userModel)
-	return nil
+		if err := s.generateAndSendVerif(ctx, userModel); err != nil {
+			return err
+		}
+
+		return nil
+	})
 }
 
-func (s *authServiceImpl) ResendVerification(email string) error {
-	data, err := s.authRepo.FindByEmail(email)
+func (s *authServiceImpl) ResendVerification(ctx context.Context, email string) error {
+	data, err := s.authRepo.FindByEmail(ctx, email)
 	if err != nil {
 		return err
 	}
@@ -72,7 +81,7 @@ func (s *authServiceImpl) ResendVerification(email string) error {
 		return customerrors.ErrColldownActive
 	}
 
-	userData, err := s.userRepo.FindByID(data.ID)
+	userData, err := s.userRepo.FindByID(ctx, data.UserID)
 	if err != nil {
 		return err
 	}
@@ -81,12 +90,15 @@ func (s *authServiceImpl) ResendVerification(email string) error {
 		return customerrors.ErrAccountAlreadyVerified
 	}
 
-	go s.generateAndSendVerif(userData)
+	if err := s.generateAndSendVerif(ctx, userData); err != nil {
+		return err
+	}
+
 	return nil
 }
 
-func (s *authServiceImpl) VerifyUser(token string) error {
-	userVerif, err := s.authRepo.FindByToken(token)
+func (s *authServiceImpl) VerifyUser(ctx context.Context, token string) error {
+	userVerif, err := s.authRepo.FindByToken(ctx, token)
 	if err != nil {
 		return err
 	}
@@ -95,7 +107,7 @@ func (s *authServiceImpl) VerifyUser(token string) error {
 		return customerrors.ErrTokenExpired
 	}
 
-	user, err := s.userRepo.FindByID(userVerif.UserID)
+	user, err := s.userRepo.FindByID(ctx, userVerif.UserID)
 	if err != nil {
 		return err
 	}
@@ -104,11 +116,11 @@ func (s *authServiceImpl) VerifyUser(token string) error {
 		return customerrors.ErrAccountAlreadyVerified
 	}
 
-	return s.userRepo.VerifUser(userVerif.UserID)
+	return s.userRepo.VerifUser(ctx, userVerif.UserID)
 }
 
-func (s *authServiceImpl) Login(emailUsername, password, requestId string) (*entity.LoginResponse, error) {
-	user, err := s.userRepo.FindByEmailUsername(emailUsername)
+func (s *authServiceImpl) Login(ctx context.Context, emailUsername, password, requestId string) (*entity.LoginResponse, error) {
+	user, err := s.userRepo.FindByEmailUsername(ctx, emailUsername)
 	if err != nil {
 		return nil, err
 	}
@@ -126,16 +138,13 @@ func (s *authServiceImpl) Login(emailUsername, password, requestId string) (*ent
 		return nil, err
 	}
 
-	if err := s.userRepo.UpdateRefreshToken(user.ID, tokens.RefreshToken); err != nil {
+	if err := s.userRepo.UpdateRefreshToken(ctx, user.ID, tokens.RefreshToken); err != nil {
 		return nil, err
 	}
 
 	go logger.Log(user.ID, "INFO", fmt.Sprintf("User %s logged in successfully", user.Username), requestId)
 
 	data := &entity.LoginResponse{
-		AccessToken: tokens.AccessToken,
-		RefreshToken: tokens.RefreshToken,
-		ExpiresIn:   int64(s.config.JWT.Expired),
 		User: entity.UserResponse{
 			ID:       user.ID,
 			Username: user.Username,
@@ -143,24 +152,26 @@ func (s *authServiceImpl) Login(emailUsername, password, requestId string) (*ent
 			Role:     user.Role,
 		},
 	}
+	data.AccessToken = tokens.AccessToken
+	data.RefreshToken = tokens.RefreshToken
+	data.ExpiresIn = int64(s.config.JWT.Expired)
 
 	return data, nil
 }
 
-
 // internal function
-func (s *authServiceImpl) generateAndSendVerif(user *entity.User) error {
-	token := utils.GenerateID("TOKEN")
+func (s *authServiceImpl) generateAndSendVerif(ctx context.Context, user *entity.User) error {
+	token := generateid.GenerateID("TOKEN")
 
 	verifData := &entity.UserVerification{
-		ID:        utils.GenerateID("VERIF"),
+		ID:        generateid.GenerateID("VERIF"),
 		UserID:    user.ID,
 		Email:     user.Email,
 		Token:     token,
 		ExpiredAt: time.Now().Add(24 * time.Hour),
 	}
 
-	if err := s.authRepo.Upsert(verifData); err != nil {
+	if err := s.authRepo.Upsert(ctx, verifData); err != nil {
 		return err
 	}
 
@@ -172,4 +183,34 @@ func (s *authServiceImpl) generateAndSendVerif(user *entity.User) error {
 	go s.emailAdapter.SendEmail(user.Email, subject, body)
 
 	return nil
+}
+
+func (s *authServiceImpl) NewAccessToken(ctx context.Context, refreshToken, requestId string) (*entity.TokenResponse, error) {
+	if refreshToken == "" {
+		return nil, customerrors.ErrUnauthorized
+	}
+
+	user, err := s.userRepo.FindByRefreshToken(ctx, refreshToken)
+	if err != nil {
+		return nil, err
+	}
+
+	tokens, err := jwt.GenerateToken(s.config, user.ID, user.Role)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := s.userRepo.UpdateRefreshToken(ctx, user.ID, tokens.RefreshToken); err != nil {
+		return nil, err
+	}
+
+	go logger.Log(user.ID, "INFO", fmt.Sprintf("User %s create new tokens successfully", user.Username), requestId)
+
+	data := &entity.TokenResponse{
+		AccessToken:  tokens.AccessToken,
+		RefreshToken: tokens.RefreshToken,
+		ExpiresIn:    int64(s.config.JWT.Expired),
+	}
+
+	return data, nil
 }
