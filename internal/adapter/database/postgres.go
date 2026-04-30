@@ -25,7 +25,7 @@ func NewPostgresConnection(cfg *config.Config) *gorm.DB {
 
 	// open connection
 	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{
-		Logger: gormlogger.Default.LogMode(gormlogger.Info),
+		Logger: gormlogger.Default.LogMode(gormlogger.Error),
 	})
 
 	if err != nil {
