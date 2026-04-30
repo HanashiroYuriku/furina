@@ -1,7 +1,8 @@
-package utils
+package generateid
 
 import (
 	"strings"
+
 	"github.com/google/uuid"
 )
 
