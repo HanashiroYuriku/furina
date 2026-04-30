@@ -1,9 +1,12 @@
 package port
 
-import "be-ayaka/internal/core/entity"
+import (
+	"be-ayaka/internal/core/entity"
+	"context"
+)
 
 type UserVerificationRepository interface {
-	Upsert(data *entity.UserVerification) error
-	FindByToken(token string) (*entity.UserVerification, error)
-	FindByEmail(email string) (*entity.UserVerification, error)
+	Upsert(ctx context.Context, data *entity.UserVerification) error
+	FindByToken(ctx context.Context, token string) (*entity.UserVerification, error)
+	FindByEmail(ctx context.Context, email string) (*entity.UserVerification, error)
 }
