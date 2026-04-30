@@ -3,6 +3,7 @@ package bootstrap
 import (
 	"be-ayaka/config"
 	"be-ayaka/internal/adapter/email"
+	"be-ayaka/internal/adapter/repository"
 	adapterRepo "be-ayaka/internal/adapter/repository"
 	"be-ayaka/internal/core/service"
 	"be-ayaka/internal/delivery/http"
@@ -27,10 +28,12 @@ func BuildAllDependencies(db *gorm.DB, cfg *config.Config) *Handlers {
 
 	// validator
 	validator := validator.NewGoValidator(db)
+	// tx manager
+	txManager := repository.NewTxManager(db)
 
 	// === adapter
 	// --- user
-	userRepo := adapterRepo.NewUserRepoPostgres(db)
+	userRepo := adapterRepo.NewUserRepo(db)
 	// --- auth
 	authRepo := adapterRepo.NewUserVerificationRepo(db)
 
@@ -38,7 +41,7 @@ func BuildAllDependencies(db *gorm.DB, cfg *config.Config) *Handlers {
 	// --- user
 	hashService := hash.NewBcryptHash()
 	// --- auth
-	authService := service.NewAuthService(userRepo, hashService, authRepo, emailAdapter, cfg)
+	authService := service.NewAuthService(userRepo, hashService, authRepo, emailAdapter, cfg, txManager)
 
 	return &Handlers{
 		Auth: http.NewAuthHandler(authService, validator),
