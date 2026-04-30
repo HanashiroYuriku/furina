@@ -1,0 +1,276 @@
+basePath: /
+definitions:
+  entity.LoginRequest:
+    properties:
+      emailUsername:
+        example: hanashiroyuriku
+        type: string
+      password:
+        example: P4$$w0rd
+        type: string
+    required:
+    - emailUsername
+    - password
+    type: object
+  entity.TokenRequest:
+    properties:
+      refreshToken:
+        type: string
+    type: object
+  entity.UserRequest:
+    properties:
+      email:
+        example: hanashiroyuriku@gmail.com
+        maxLength: 100
+        type: string
+      password:
+        example: P4$$word
+        type: string
+      username:
+        example: hanashiroyuriku
+        maxLength: 20
+        minLength: 3
+        type: string
+    required:
+    - email
+    - password
+    - username
+    type: object
+  entity.UserResponse:
+    properties:
+      email:
+        type: string
+      id:
+        type: string
+      isVerified:
+        type: boolean
+      role:
+        type: string
+      username:
+        type: string
+    type: object
+  entity.UserVerificationRequest:
+    properties:
+      email:
+        type: string
+    required:
+    - email
+    type: object
+  response.Response:
+    properties:
+      data: {}
+      errorField: {}
+      errorList: {}
+      message:
+        type: string
+      requestId:
+        type: string
+      status:
+        type: string
+      statusCodeClient:
+        type: integer
+    type: object
+host: localhost:8000
+info:
+  contact:
+    name: Hanashiro Yuriku
+  description: API Documentation for Material Tracer - FURINA.
+  title: Furina (Material Tracer) API
+  version: "1.0"
+paths:
+  /api/v1/auth/login:
+    post:
+      consumes:
+      - application/json
+      description: Login using email or username and password and receive access &
+        refresh tokens
+      parameters:
+      - description: Payload Login
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/entity.LoginRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/response.Response'
+        "404":
+          description: Email/username does not exist
+          schema:
+            $ref: '#/definitions/response.Response'
+        "422":
+          description: Validation Failed
+          schema:
+            $ref: '#/definitions/response.Response'
+      summary: Login User
+      tags:
+      - Authentication
+  /api/v1/auth/refresh:
+    post:
+      consumes:
+      - application/json
+      description: Refresh access token using valid refresh token
+      parameters:
+      - description: Payload Token Refresh
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/entity.TokenRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/response.Response'
+        "401":
+          description: Unauthorized/Token Expired
+          schema:
+            $ref: '#/definitions/response.Response'
+      summary: Refresh Access Token
+      tags:
+      - Authentication
+  /api/v1/auth/register:
+    post:
+      consumes:
+      - application/json
+      description: Register new user using email, username, and password
+      parameters:
+      - description: Payload Register
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/entity.UserRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/entity.UserResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/response.Response'
+        "422":
+          description: Validation Failed
+          schema:
+            $ref: '#/definitions/response.Response'
+      summary: Register new User
+      tags:
+      - Authentication
+  /api/v1/auth/resend-verification:
+    post:
+      consumes:
+      - application/json
+      description: Resend new email verification to user using email after user failed
+        to receive or expired token
+      parameters:
+      - description: Payload Email Verification
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/entity.UserVerificationRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Response'
+            - properties:
+                data:
+                  type: object
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/response.Response'
+        "404":
+          description: Data Not Found
+          schema:
+            $ref: '#/definitions/response.Response'
+        "422":
+          description: Validation Failed
+          schema:
+            $ref: '#/definitions/response.Response'
+      summary: Resend new verification email to user
+      tags:
+      - Authentication
+  /api/v1/auth/verify:
+    get:
+      description: verifies user's email using token from email verif link and activate
+        the account
+      parameters:
+      - description: Verify Email Token
+        in: query
+        name: token
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/response.Response'
+        "401":
+          description: Unauthorized/Token Expired
+          schema:
+            $ref: '#/definitions/response.Response'
+        "404":
+          description: Data Not Found
+          schema:
+            $ref: '#/definitions/response.Response'
+        "409":
+          description: Data Conflict
+          schema:
+            $ref: '#/definitions/response.Response'
+      summary: verify user's email
+      tags:
+      - Authentication
+  /health:
+    get:
+      description: make sure the server is running and database connection
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Response'
+      summary: Health Check
+      tags:
+      - System
+securityDefinitions:
+  BearerAuth:
+    description: Type "Bearer" followed by a space and JWT token.
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"
