@@ -34,7 +34,7 @@ func GenerateToken(cfg *config.Config, userID string, role string) (*TokenPair, 
 		},
 	}
 
-	accessToken, err := jwt.NewWithClaims(jwt.SigningMethodES256, accessClaims).SignedString([]byte(cfg.JWT.Secret))
+	accessToken, err := jwt.NewWithClaims(jwt.SigningMethodHS256, accessClaims).SignedString([]byte(cfg.JWT.Secret))
 	if err != nil {
 		return nil, err
 	}
@@ -51,7 +51,7 @@ func GenerateToken(cfg *config.Config, userID string, role string) (*TokenPair, 
 		},
 	}
 
-	refreshToken, err := jwt.NewWithClaims(jwt.SigningMethodES256, refreshClaims).SignedString([]byte(cfg.JWT.RefreshSecret))
+	refreshToken, err := jwt.NewWithClaims(jwt.SigningMethodHS256, refreshClaims).SignedString([]byte(cfg.JWT.RefreshSecret))
 	if err != nil {
 		return nil, err
 	}
