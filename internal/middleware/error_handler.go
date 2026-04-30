@@ -2,24 +2,50 @@ package middleware
 
 import (
 	"be-ayaka/internal/core/customerrors"
+	requestid "be-ayaka/pkg/request_id"
 	"be-ayaka/pkg/response"
-	"be-ayaka/pkg/utils"
 	"errors"
 
 	"github.com/gofiber/fiber/v2"
 )
 
 func GlobalErrorHandler(c *fiber.Ctx, err error) error {
-	requestId := utils.GetRequestID(c)
+	requestId := requestid.GetRequestID(c)
 
+	// unprocess 422
 	var valErr *customerrors.ValidationError
-
 	if errors.As(err, &valErr) {
 		return c.Status(fiber.StatusUnprocessableEntity).JSON(
 			response.NewErrorFieldResponse(
 				response.UnprocessableEntity,
 				valErr.Error(),
 				valErr.Detail,
+				requestId,
+			),
+		)
+	}
+
+	// data conflict 409
+	var valErrConflict *customerrors.ConflictError
+	if errors.As(err, &valErrConflict) {
+		return c.Status(fiber.StatusConflict).JSON(
+			response.NewErrorFieldResponse(
+				response.DataConflict,
+				valErrConflict.Error(),
+				valErrConflict.Detail,
+				requestId,
+			),
+		)
+	}
+
+	// not found 404
+	var valErrNotFound *customerrors.NotFoundError
+	if errors.As(err, &valErrNotFound) {
+		return c.Status(fiber.StatusNotFound).JSON(
+			response.NewErrorFieldResponse(
+				response.DataNotFound,
+				valErrNotFound.Error(),
+				valErrNotFound.Detail,
 				requestId,
 			),
 		)
@@ -45,11 +71,6 @@ func GlobalErrorHandler(c *fiber.Ctx, err error) error {
 		errors.Is(err, customerrors.ErrTokenExpired):
 		code = fiber.StatusUnauthorized
 		statusString = response.Unauthorized
-		message = err.Error()
-
-	case errors.Is(err, customerrors.ErrDataConflict):
-		code = fiber.StatusConflict
-		statusString = response.DataConflict
 		message = err.Error()
 
 	case errors.Is(err, customerrors.ErrBadRequest):
@@ -80,6 +101,11 @@ func GlobalErrorHandler(c *fiber.Ctx, err error) error {
 	case errors.Is(err, customerrors.ErrAccountAlreadyVerified):
 		code = fiber.StatusConflict
 		statusString = response.DataConflict
+		message = err.Error()
+
+	case errors.Is(err, customerrors.ErrUnauthorized):
+		code = fiber.StatusUnauthorized
+		statusString = response.Unauthorized
 		message = err.Error()
 	}
 
