@@ -1,9 +1,11 @@
 package service_test
 
 import (
+	"be-ayaka/config"
 	"be-ayaka/internal/core/customerrors"
 	"be-ayaka/internal/core/entity"
 	"be-ayaka/internal/core/service"
+	"be-ayaka/internal/mocks"
 	"context"
 	"testing"
 	"time"
@@ -12,67 +14,14 @@ import (
 	"github.com/stretchr/testify/mock"
 )
 
-// Mock user verif repo
-type MockUserVerificationRepo struct {
-	mock.Mock
+// var dummy
+var dummyCfg = &config.Config{
+	Frontend: config.FrontendConfig{
+		URL: "http://localhost:3000",
+	},
 }
 
-// func find by token
-func (m *MockUserVerificationRepo) FindByToken(ctx context.Context, token string) (*entity.UserVerification, error) {
-	args := m.Called(ctx, token)
-	if args.Get(0) != nil {
-		return args.Get(0).(*entity.UserVerification), args.Error(1)
-	}
-	return nil, args.Error(1)
-}
-
-// func upsert
-func (m *MockUserVerificationRepo) Upsert(ctx context.Context, data *entity.UserVerification) error {
-	args := m.Called(ctx, data)
-	return args.Error(0)
-}
-
-// func by email
-func (m *MockUserVerificationRepo) FindByEmail(ctx context.Context, email string) (*entity.UserVerification, error) {
-	args := m.Called(ctx, email)
-	if args.Get(0) != nil {
-		return args.Get(0).(*entity.UserVerification), args.Error(1)
-	}
-	return nil, args.Error(1)
-}
-
-// mock user repo
-type MockUserRepo struct {
-	mock.Mock
-}
-
-// func find by id
-func (m *MockUserRepo) FindByID(ctx context.Context, id string) (*entity.User, error) {
-	args := m.Called(ctx, id)
-	if args.Get(0) != nil {
-		return args.Get(0).(*entity.User), args.Error(1)
-	}
-	return nil, args.Error(1)
-}
-
-// func verif user
-func (m *MockUserRepo) VerifUser(ctx context.Context, id string) error {
-	args := m.Called(ctx, id)
-	return args.Error(0)
-}
-
-func (m *MockUserRepo) FindByEmailUsername(ctx context.Context, value string) (*entity.User, error) {
-	return nil, nil
-}
-func (m *MockUserRepo) Create(ctx context.Context, user *entity.User) error { return nil }
-func (m *MockUserRepo) UpdateRefreshToken(ctx context.Context, id string, token string) error {
-	return nil
-}
-func (m *MockUserRepo) FindByRefreshToken(ctx context.Context, token string) (*entity.User, error) {
-	return nil, nil
-}
-
-// test verify user
+// =============================== test verify user
 func TestVerifyUser(t *testing.T) {
 	// scenario: Token Valid and user verified successfully
 	t.Run("Success Verification", func(t *testing.T) {
@@ -92,8 +41,8 @@ func TestVerifyUser(t *testing.T) {
 		mockUserData.ID = userID
 
 		// setup mocking
-		mockAuthRepo := new(MockUserVerificationRepo)
-		mockUserRepo := new(MockUserRepo)
+		mockAuthRepo := new(mocks.MockUserVerificationRepo)
+		mockUserRepo := new(mocks.MockUserRepo)
 
 		mockAuthRepo.On("FindByToken", ctx, validToken).Return(mockVerifData, nil)
 		mockUserRepo.On("FindByID", ctx, userID).Return(mockUserData, nil)
@@ -118,8 +67,8 @@ func TestVerifyUser(t *testing.T) {
 			ExpiredAt: time.Now().Add(-1 * time.Hour),
 		}
 
-		mockAuthRepo := new(MockUserVerificationRepo)
-		mockUserRepo := new(MockUserRepo)
+		mockAuthRepo := new(mocks.MockUserVerificationRepo)
+		mockUserRepo := new(mocks.MockUserRepo)
 
 		mockAuthRepo.On("FindByToken", ctx, expiredToken).Return(mockVerifData, nil)
 
@@ -135,8 +84,8 @@ func TestVerifyUser(t *testing.T) {
 		ctx := context.Background()
 		notFoundToken := "TOKEN-UNAVAIL"
 
-		mockAuthRepo := new(MockUserVerificationRepo)
-		MockUserRepo := new(MockUserRepo)
+		mockAuthRepo := new(mocks.MockUserVerificationRepo)
+		MockUserRepo := new(mocks.MockUserRepo)
 
 		expectedError := customerrors.ErrDataNotFound
 
@@ -159,13 +108,13 @@ func TestVerifyUser(t *testing.T) {
 		userID := "USER-123"
 
 		mockVerifData := &entity.UserVerification{
-			UserID: userID,
-			Token: validToken,
+			UserID:    userID,
+			Token:     validToken,
 			ExpiredAt: time.Now().Add(1 * time.Hour),
 		}
 
-		mockAuthRepo := new(MockUserVerificationRepo)
-		mockUserRepo := new(MockUserRepo)
+		mockAuthRepo := new(mocks.MockUserVerificationRepo)
+		mockUserRepo := new(mocks.MockUserRepo)
 
 		mockAuthRepo.On("FindByToken", ctx, validToken).Return(mockVerifData, nil)
 
@@ -190,13 +139,13 @@ func TestVerifyUser(t *testing.T) {
 		userID := "USER-123"
 
 		mockVerifData := &entity.UserVerification{
-			UserID: userID,
-			Token: token,
+			UserID:    userID,
+			Token:     token,
 			ExpiredAt: time.Now().Add(1 * time.Hour),
 		}
 
-		mockAuthRepo := new(MockUserVerificationRepo)
-		mockUserRepo := new(MockUserRepo)
+		mockAuthRepo := new(mocks.MockUserVerificationRepo)
+		mockUserRepo := new(mocks.MockUserRepo)
 
 		mockAuthRepo.On("FindByToken", ctx, token).Return(mockVerifData, nil)
 
@@ -215,4 +164,43 @@ func TestVerifyUser(t *testing.T) {
 		mockUserRepo.AssertExpectations(t)
 		mockUserRepo.AssertNotCalled(t, "VerifUser")
 	})
+}
+
+// =============================== test create
+func TestCreate(t *testing.T) {
+	// scenario: success create user
+	t.Run("Success Create", func(t *testing.T) {
+		ctx := context.Background()
+		user := &entity.UserRequest{
+			Username: "yuriku",
+			Email:    "yuriku@mail.com",
+			Password: "password123",
+		}
+		hashedPassword := "HASHEDPASSWORD"
+
+		mockHash := new(mocks.MockHashService)
+		mockTx := new(mocks.MockTxManager)
+		mockUserRepo := new(mocks.MockUserRepo)
+		mockAuthRepo := new(mocks.MockUserVerificationRepo)
+		mockEmail := new(mocks.MockEmail)
+
+		mockHash.On("HashPassword", user.Password).Return(hashedPassword, nil)
+		mockTx.On("WithTx", ctx, mock.Anything).Return(nil)
+		mockUserRepo.On("Create", ctx, mock.Anything).Return(nil)
+		mockAuthRepo.On("Upsert", ctx, mock.Anything).Return(nil)
+		mockEmail.On("SendEmail", user.Email, mock.Anything, mock.Anything).Return(nil).Maybe()
+
+		service := service.NewAuthService(mockUserRepo, mockHash, mockAuthRepo, mockEmail, dummyCfg, mockTx)
+
+		err := service.Create(ctx, user)
+
+		assert.NoError(t, err)
+		mockHash.AssertExpectations(t)
+		mockTx.AssertExpectations(t)
+		mockAuthRepo.AssertExpectations(t)
+		mockUserRepo.AssertExpectations(t)
+		mockEmail.AssertExpectations(t)
+	})
+
+	// failed scenario: 
 }
