@@ -10,7 +10,6 @@ import (
 	"be-ayaka/pkg/jwt"
 	"be-ayaka/pkg/logger"
 	"context"
-	"errors"
 	"fmt"
 	"net/url"
 	"time"
@@ -47,7 +46,7 @@ func NewAuthService(repo port.UserRepository, hashService hash.HashService, auth
 func (s *authServiceImpl) Create(ctx context.Context, user *entity.UserRequest) error {
 	passwordHash, err := s.hashService.HashPassword(user.Password)
 	if err != nil {
-		return errors.New("Failed to hash Password")
+		return customerrors.ErrFailHash
 	}
 
 	userModel := &entity.User{
