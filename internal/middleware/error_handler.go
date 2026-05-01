@@ -107,6 +107,11 @@ func GlobalErrorHandler(c *fiber.Ctx, err error) error {
 		code = fiber.StatusUnauthorized
 		statusString = response.Unauthorized
 		message = err.Error()
+
+	case errors.Is(err, customerrors.ErrFailHash):
+		code = fiber.StatusInternalServerError
+		statusString = response.InternalServerError
+		message = err.Error()
 	}
 
 	return c.Status(code).JSON(response.NewErrorResponse(
