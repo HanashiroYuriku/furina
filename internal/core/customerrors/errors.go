@@ -12,6 +12,7 @@ var (
 	ErrInvalidCredentials     = errors.New("Invalid Username / Email")
 	ErrAccountInactive        = errors.New("Account Not Verified")
 	ErrAccountAlreadyVerified = errors.New("Account Already Verified")
+	ErrFailHash               = errors.New("Failed to hash Password")
 )
 
 type ValidationError struct {
@@ -28,7 +29,6 @@ func NewValidationError(detail string) error {
 	}
 }
 
-
 type ConflictError struct {
 	Detail string
 }
@@ -42,7 +42,6 @@ func NewConflictError(detail string) error {
 		Detail: detail,
 	}
 }
-
 
 type NotFoundError struct {
 	Detail string
