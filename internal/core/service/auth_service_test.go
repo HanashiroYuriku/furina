@@ -7,6 +7,7 @@ import (
 	"be-ayaka/internal/core/service"
 	"be-ayaka/internal/mocks"
 	"context"
+	"errors"
 	"testing"
 	"time"
 
@@ -202,5 +203,101 @@ func TestCreate(t *testing.T) {
 		mockEmail.AssertExpectations(t)
 	})
 
-	// failed scenario: 
+	// failed scenario: failed to hash password
+	t.Run("Failed-Failed to Hash Password", func(t *testing.T) {
+		ctx := context.Background()
+		user := &entity.UserRequest{
+			Username: "yuriku",
+			Email:    "yuriku@mail.com",
+			Password: "password123",
+		}
+		mockHash := new(mocks.MockHashService)
+		mockUserRepo := new(mocks.MockUserRepo)
+		mockTx := new(mocks.MockTxManager)
+
+		expectedError := customerrors.ErrFailHash
+		mockHash.On("HashPassword", user.Password).Return("", expectedError)
+
+		service := service.NewAuthService(mockUserRepo, mockHash, nil, nil, nil, mockTx)
+		err := service.Create(ctx, user)
+
+		assert.Error(t, err)
+		assert.ErrorIs(t, err, expectedError)
+
+		mockTx.AssertNotCalled(t, "WithTx", mock.Anything, mock.Anything)
+		mockUserRepo.AssertNotCalled(t, "Create", mock.Anything, mock.Anything)
+
+		mockHash.AssertExpectations(t)
+	})
+
+	// failed scenario: failed to create user / save to table user
+	t.Run("Failed - Failed Save Data to Table User", func(t *testing.T) {
+		ctx := context.Background()
+		user := &entity.UserRequest{
+			Username: "yuriku",
+			Email:    "yuriku@mail.com",
+			Password: "password123",
+		}
+		hashedPassword := "HASHEDPASSWORD"
+
+		mockHash := new(mocks.MockHashService)
+		mockTx := new(mocks.MockTxManager)
+		mockUserRepo := new(mocks.MockUserRepo)
+		mockAuthRepo := new(mocks.MockUserVerificationRepo)
+
+		dbError := errors.New("sql error")
+
+		mockHash.On("HashPassword", user.Password).Return(hashedPassword, nil)
+		mockUserRepo.On("Create", ctx, mock.Anything).Return(dbError)
+		mockTx.On("WithTx", ctx, mock.Anything).Return(dbError)
+
+		service := service.NewAuthService(mockUserRepo, mockHash, mockAuthRepo, nil, nil, mockTx)
+		err := service.Create(ctx, user)
+
+		assert.Error(t, err)
+		assert.ErrorIs(t, err, dbError)
+		mockAuthRepo.AssertNotCalled(t, "Upsert", mock.Anything, mock.Anything)
+
+		mockHash.AssertExpectations(t)
+		mockUserRepo.AssertExpectations(t)
+		mockTx.AssertExpectations(t)
+	})
+
+	// failed scenario: failed to save token to table verify user
+	t.Run("Failed - Error Inside func generateAndSendVerif", func(t *testing.T) {
+		ctx := context.Background()
+		user := &entity.UserRequest{
+			Username: "yuriku",
+			Email:    "yuriku@mail.com",
+			Password: "password123",
+		}
+		hashedPassword := "HASHEDPASSWORD"
+
+		mockHash := new(mocks.MockHashService)
+		mockTx := new(mocks.MockTxManager)
+		mockUserRepo := new(mocks.MockUserRepo)
+		mockAuthRepo := new(mocks.MockUserVerificationRepo)
+		mockEmail := new(mocks.MockEmail)
+
+		dbError := errors.New("sql error")
+
+		mockHash.On("HashPassword", user.Password).Return(hashedPassword, nil)
+		mockUserRepo.On("Create", ctx, mock.Anything).Return(nil)
+		mockAuthRepo.On("Upsert", ctx, mock.Anything).Return(dbError)
+		mockTx.On("WithTx", ctx, mock.Anything).Return(dbError)
+
+		service := service.NewAuthService(mockUserRepo, mockHash, mockAuthRepo, mockEmail, dummyCfg, mockTx)
+
+		err := service.Create(ctx, user)
+
+		assert.Error(t, err)
+		assert.ErrorIs(t, err, dbError)
+
+		mockEmail.AssertNotCalled(t, "SendEmail", mock.Anything, mock.Anything, mock.Anything)
+
+		mockHash.AssertExpectations(t)
+		mockUserRepo.AssertExpectations(t)
+		mockAuthRepo.AssertExpectations(t)
+		mockTx.AssertExpectations(t)
+	})
 }
