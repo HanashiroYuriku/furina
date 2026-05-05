@@ -301,3 +301,178 @@ func TestCreate(t *testing.T) {
 		mockTx.AssertExpectations(t)
 	})
 }
+
+// =============================== test resend verification
+func TestResendVerification(t *testing.T) {
+	// success scneario
+	t.Run("Success Resend Verification", func(t *testing.T) {
+		ctx := context.Background()
+		email := "yuriku@mail.com"
+		userID := "USER-123"
+
+		mockVerifData := &entity.UserVerification{
+			UserID:    userID,
+			CreatedAt: time.Now().Add(-6 * time.Minute),
+		}
+
+		mockUserData := &entity.User{
+			IsVerified: false,
+			Email: email,
+			Username: "yuriku",
+		}
+		mockUserData.ID = userID
+
+		mockAuthRepo := new(mocks.MockUserVerificationRepo)
+		mockUserRepo := new(mocks.MockUserRepo)
+		mockEmail := new(mocks.MockEmail)
+
+		mockAuthRepo.On("FindByEmail", ctx, email).Return(mockVerifData, nil)
+		mockUserRepo.On("FindByID", ctx, userID).Return(mockUserData, nil)
+
+		mockAuthRepo.On("Upsert", ctx, mock.Anything).Return(nil)
+		mockEmail.On("SendEmail", email, mock.Anything, mock.Anything).Return(nil).Maybe()
+
+		service := service.NewAuthService(mockUserRepo, nil, mockAuthRepo, mockEmail, dummyCfg, nil)
+		err := service.ResendVerification(ctx, email)
+
+		assert.NoError(t, err)
+		mockAuthRepo.AssertExpectations(t)
+		mockUserRepo.AssertExpectations(t)
+		mockEmail.AssertExpectations(t)
+	})
+
+	// failed scenario: email not found
+	t.Run("Failed - Email Not Found", func(t *testing.T) {
+		ctx := context.Background()
+		email := "yuriku@mail.com"
+
+		mockAuthRepo := new(mocks.MockUserVerificationRepo)
+		mockUserRepo := new(mocks.MockUserRepo)
+
+		mockAuthRepo.On("FindByEmail", ctx, email).Return(nil, customerrors.ErrDataNotFound)
+
+		service := service.NewAuthService(mockUserRepo, nil, mockAuthRepo, nil, nil, nil)
+		err := service.ResendVerification(ctx, email)
+
+		assert.ErrorIs(t, err, customerrors.ErrDataNotFound)
+		mockUserRepo.AssertNotCalled(t, "FindByID", mock.Anything, mock.Anything)
+		mockAuthRepo.AssertExpectations(t)
+	})
+
+	// failed scenario: cooldown still active
+	t.Run("Failed - Cooldown is active", func(t *testing.T) {
+		ctx := context.Background()
+		email := "yuriku@mail.com"
+
+		mockAuthData := &entity.UserVerification{
+			CreatedAt: time.Now().Add(-2 * time.Minute),
+		}
+
+		mockAuthRepo := new(mocks.MockUserVerificationRepo)
+		mockUserRepo := new(mocks.MockUserRepo)
+
+		mockAuthRepo.On("FindByEmail", ctx, email).Return(mockAuthData, nil)
+
+		service := service.NewAuthService(mockUserRepo, nil, mockAuthRepo, nil, nil, nil)
+		err := service.ResendVerification(ctx, email)
+
+		assert.ErrorIs(t, err, customerrors.ErrCooldownActive)
+		mockUserRepo.AssertNotCalled(t, "FindByID", mock.Anything, mock.Anything)
+		mockAuthRepo.AssertExpectations(t)
+	})
+
+	// failed scenario: user id not found or error on find by id function
+	t.Run("Failed - User ID Not Found", func(t *testing.T) {
+		ctx := context.Background()
+		email := "yuriku@mail.com"
+
+		mockAuthData := &entity.UserVerification{
+			UserID:    "USER-123",
+			CreatedAt: time.Now().Add(-10 * time.Minute),
+		}
+
+		mockAuthRepo := new(mocks.MockUserVerificationRepo)
+		mockUserRepo := new(mocks.MockUserRepo)
+		mockEmail := new(mocks.MockEmail)
+
+		mockAuthRepo.On("FindByEmail", ctx, email).Return(mockAuthData, nil)
+		mockUserRepo.On("FindByID", ctx, mockAuthData.UserID).Return(nil, customerrors.ErrDataNotFound)
+
+		service := service.NewAuthService(mockUserRepo, nil, mockAuthRepo, nil, nil, nil)
+		err := service.ResendVerification(ctx, email)
+
+		assert.ErrorIs(t, err, customerrors.ErrDataNotFound)
+		mockEmail.AssertNotCalled(t, "SendEmail", mock.Anything, mock.Anything, mock.Anything)
+		mockAuthRepo.AssertNotCalled(t, "Upsert", mock.Anything, mock.Anything)
+		mockAuthRepo.AssertExpectations(t)
+		mockUserRepo.AssertExpectations(t)
+	})
+
+	// failed scenario: user already verified
+	t.Run("Failed - User Already Verified", func(t *testing.T) {
+		ctx := context.Background()
+		email := "yuriku@mail.com"
+		userID := "USER-123"
+
+		mockAuthData := &entity.UserVerification{
+			CreatedAt: time.Now().Add(-10 * time.Minute),
+			UserID: userID,
+		}
+
+		mockUserData := &entity.User{
+			IsVerified: true,
+		}
+
+		mockAuthRepo := new(mocks.MockUserVerificationRepo)
+		mockUserRepo := new(mocks.MockUserRepo)
+		mockEmail := new(mocks.MockEmail)
+
+		mockAuthRepo.On("FindByEmail", ctx, email).Return(mockAuthData, nil)
+		mockUserRepo.On("FindByID", ctx, userID).Return(mockUserData, nil)
+
+		service := service.NewAuthService(mockUserRepo, nil, mockAuthRepo, mockEmail, nil, nil)
+		err := service.ResendVerification(ctx, email)
+
+		assert.ErrorIs(t, err, customerrors.ErrAccountAlreadyVerified)
+		mockEmail.AssertNotCalled(t, "SendEmail", mock.Anything, mock.Anything)
+		mockAuthRepo.AssertNotCalled(t, "Upsert", mock.Anything, mock.Anything)
+		mockAuthRepo.AssertExpectations(t)
+		mockUserRepo.AssertExpectations(t)
+	})
+
+	// failed scenario: failed to save token token to table verify user
+	t.Run("Failed - Error inside func generateAndSendVerif", func(t *testing.T) {
+		ctx := context.Background()
+		email := "yuriku@mail.com"
+		userID := "ISER-123"
+
+		mockVerifData := &entity.UserVerification{
+			UserID:    userID,
+			CreatedAt: time.Now().Add(-6 * time.Minute),
+		}
+
+		mockUserData := &entity.User{
+			IsVerified: false,
+		}
+		mockUserData.ID = userID
+
+		mockAuthRepo := new(mocks.MockUserVerificationRepo)
+		mockUserRepo := new(mocks.MockUserRepo)
+		mockEmail := new(mocks.MockEmail)
+
+		dbError := errors.New("sql error")
+
+		mockAuthRepo.On("FindByEmail", ctx, email).Return(mockVerifData, nil)
+		mockUserRepo.On("FindByID", ctx, userID).Return(mockUserData, nil)
+
+		mockAuthRepo.On("Upsert", ctx, mock.Anything).Return(dbError)
+
+		service := service.NewAuthService(mockUserRepo, nil, mockAuthRepo, mockEmail, dummyCfg, nil)
+		err := service.ResendVerification(ctx, email)
+
+		assert.ErrorIs(t, err, dbError)
+		mockEmail.AssertNotCalled(t, "SendEmail")
+		mockUserRepo.AssertExpectations(t)
+		mockAuthRepo.AssertExpectations(t)
+	})
+}
