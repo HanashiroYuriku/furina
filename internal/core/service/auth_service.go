@@ -77,7 +77,7 @@ func (s *authServiceImpl) ResendVerification(ctx context.Context, email string) 
 	}
 
 	if time.Since(data.CreatedAt).Minutes() < 5 {
-		return customerrors.ErrColldownActive
+		return customerrors.ErrCooldownActive
 	}
 
 	userData, err := s.userRepo.FindByID(ctx, data.UserID)

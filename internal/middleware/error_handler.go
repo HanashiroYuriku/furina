@@ -78,7 +78,7 @@ func GlobalErrorHandler(c *fiber.Ctx, err error) error {
 		statusString = response.BadRequest
 		message = err.Error()
 
-	case errors.Is(err, customerrors.ErrColldownActive):
+	case errors.Is(err, customerrors.ErrCooldownActive):
 		code = fiber.StatusTooManyRequests
 		statusString = response.TooManyRequests
 		message = err.Error()
