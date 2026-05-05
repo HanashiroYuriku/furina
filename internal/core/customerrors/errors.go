@@ -8,7 +8,7 @@ var (
 	ErrTokenExpired           = errors.New("Token Expired")
 	ErrUnauthorized           = errors.New("Unauthorized")
 	ErrBadRequest             = errors.New("Bad Request")
-	ErrColldownActive         = errors.New("Please Wait 5 Minutes Before Sending Again")
+	ErrCooldownActive         = errors.New("Please Wait 5 Minutes Before Sending Again")
 	ErrInvalidCredentials     = errors.New("Invalid Username / Email")
 	ErrAccountInactive        = errors.New("Account Not Verified")
 	ErrAccountAlreadyVerified = errors.New("Account Already Verified")
