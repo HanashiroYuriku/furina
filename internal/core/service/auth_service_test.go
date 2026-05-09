@@ -1,11 +1,12 @@
 package service_test
 
 import (
-	"be-ayaka/config"
 	"be-ayaka/internal/core/customerrors"
 	"be-ayaka/internal/core/entity"
 	"be-ayaka/internal/core/service"
-	"be-ayaka/internal/mocks"
+	"be-ayaka/internal/testingutils"
+	"be-ayaka/internal/testingutils/mocks"
+	"be-ayaka/pkg/jwt"
 	"context"
 	"errors"
 	"testing"
@@ -14,13 +15,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
-
-// var dummy
-var dummyCfg = &config.Config{
-	Frontend: config.FrontendConfig{
-		URL: "http://localhost:3000",
-	},
-}
 
 // =============================== test verify user
 func TestVerifyUser(t *testing.T) {
@@ -49,7 +43,7 @@ func TestVerifyUser(t *testing.T) {
 		mockUserRepo.On("FindByID", ctx, userID).Return(mockUserData, nil)
 		mockUserRepo.On("VerifUser", ctx, userID).Return(nil)
 
-		serviceAuth := service.NewAuthService(mockUserRepo, nil, mockAuthRepo, nil, nil, nil)
+		serviceAuth := service.NewAuthService(mockUserRepo, nil, mockAuthRepo, nil, nil, nil, nil)
 		err := serviceAuth.VerifyUser(ctx, validToken)
 
 		assert.NoError(t, err)
@@ -73,7 +67,7 @@ func TestVerifyUser(t *testing.T) {
 
 		mockAuthRepo.On("FindByToken", ctx, expiredToken).Return(mockVerifData, nil)
 
-		serviceAuth := service.NewAuthService(mockUserRepo, nil, mockAuthRepo, nil, nil, nil)
+		serviceAuth := service.NewAuthService(mockUserRepo, nil, mockAuthRepo, nil, nil, nil, nil)
 		err := serviceAuth.VerifyUser(ctx, expiredToken)
 
 		assert.ErrorIs(t, err, customerrors.ErrTokenExpired)
@@ -92,7 +86,7 @@ func TestVerifyUser(t *testing.T) {
 
 		mockAuthRepo.On("FindByToken", ctx, notFoundToken).Return(nil, expectedError)
 
-		serviceAuth := service.NewAuthService(MockUserRepo, nil, mockAuthRepo, nil, nil, nil)
+		serviceAuth := service.NewAuthService(MockUserRepo, nil, mockAuthRepo, nil, nil, nil, nil)
 
 		err := serviceAuth.VerifyUser(ctx, notFoundToken)
 
@@ -122,7 +116,7 @@ func TestVerifyUser(t *testing.T) {
 		expectedError := customerrors.ErrDataNotFound
 		mockUserRepo.On("FindByID", ctx, userID).Return(nil, expectedError)
 
-		serviceAuth := service.NewAuthService(mockUserRepo, nil, mockAuthRepo, nil, nil, nil)
+		serviceAuth := service.NewAuthService(mockUserRepo, nil, mockAuthRepo, nil, nil, nil, nil)
 
 		err := serviceAuth.VerifyUser(ctx, validToken)
 
@@ -157,7 +151,7 @@ func TestVerifyUser(t *testing.T) {
 
 		mockUserRepo.On("FindByID", ctx, userID).Return(mockUserData, nil)
 
-		serviceAuth := service.NewAuthService(mockUserRepo, nil, mockAuthRepo, nil, nil, nil)
+		serviceAuth := service.NewAuthService(mockUserRepo, nil, mockAuthRepo, nil, nil, nil, nil)
 		err := serviceAuth.VerifyUser(ctx, token)
 
 		assert.ErrorIs(t, err, customerrors.ErrAccountAlreadyVerified)
@@ -191,7 +185,7 @@ func TestCreate(t *testing.T) {
 		mockAuthRepo.On("Upsert", ctx, mock.Anything).Return(nil)
 		mockEmail.On("SendEmail", user.Email, mock.Anything, mock.Anything).Return(nil).Maybe()
 
-		service := service.NewAuthService(mockUserRepo, mockHash, mockAuthRepo, mockEmail, dummyCfg, mockTx)
+		service := service.NewAuthService(mockUserRepo, mockHash, mockAuthRepo, mockEmail, testingutils.GetDummyConfig(), mockTx, nil)
 
 		err := service.Create(ctx, user)
 
@@ -218,7 +212,7 @@ func TestCreate(t *testing.T) {
 		expectedError := customerrors.ErrFailHash
 		mockHash.On("HashPassword", user.Password).Return("", expectedError)
 
-		service := service.NewAuthService(mockUserRepo, mockHash, nil, nil, nil, mockTx)
+		service := service.NewAuthService(mockUserRepo, mockHash, nil, nil, nil, mockTx, nil)
 		err := service.Create(ctx, user)
 
 		assert.Error(t, err)
@@ -251,7 +245,7 @@ func TestCreate(t *testing.T) {
 		mockUserRepo.On("Create", ctx, mock.Anything).Return(dbError)
 		mockTx.On("WithTx", ctx, mock.Anything).Return(dbError)
 
-		service := service.NewAuthService(mockUserRepo, mockHash, mockAuthRepo, nil, nil, mockTx)
+		service := service.NewAuthService(mockUserRepo, mockHash, mockAuthRepo, nil, nil, mockTx, nil)
 		err := service.Create(ctx, user)
 
 		assert.Error(t, err)
@@ -286,7 +280,7 @@ func TestCreate(t *testing.T) {
 		mockAuthRepo.On("Upsert", ctx, mock.Anything).Return(dbError)
 		mockTx.On("WithTx", ctx, mock.Anything).Return(dbError)
 
-		service := service.NewAuthService(mockUserRepo, mockHash, mockAuthRepo, mockEmail, dummyCfg, mockTx)
+		service := service.NewAuthService(mockUserRepo, mockHash, mockAuthRepo, mockEmail, testingutils.GetDummyConfig(), mockTx, nil)
 
 		err := service.Create(ctx, user)
 
@@ -317,8 +311,8 @@ func TestResendVerification(t *testing.T) {
 
 		mockUserData := &entity.User{
 			IsVerified: false,
-			Email: email,
-			Username: "yuriku",
+			Email:      email,
+			Username:   "yuriku",
 		}
 		mockUserData.ID = userID
 
@@ -332,7 +326,7 @@ func TestResendVerification(t *testing.T) {
 		mockAuthRepo.On("Upsert", ctx, mock.Anything).Return(nil)
 		mockEmail.On("SendEmail", email, mock.Anything, mock.Anything).Return(nil).Maybe()
 
-		service := service.NewAuthService(mockUserRepo, nil, mockAuthRepo, mockEmail, dummyCfg, nil)
+		service := service.NewAuthService(mockUserRepo, nil, mockAuthRepo, mockEmail, testingutils.GetDummyConfig(), nil, nil)
 		err := service.ResendVerification(ctx, email)
 
 		assert.NoError(t, err)
@@ -351,7 +345,7 @@ func TestResendVerification(t *testing.T) {
 
 		mockAuthRepo.On("FindByEmail", ctx, email).Return(nil, customerrors.ErrDataNotFound)
 
-		service := service.NewAuthService(mockUserRepo, nil, mockAuthRepo, nil, nil, nil)
+		service := service.NewAuthService(mockUserRepo, nil, mockAuthRepo, nil, nil, nil, nil)
 		err := service.ResendVerification(ctx, email)
 
 		assert.ErrorIs(t, err, customerrors.ErrDataNotFound)
@@ -373,7 +367,7 @@ func TestResendVerification(t *testing.T) {
 
 		mockAuthRepo.On("FindByEmail", ctx, email).Return(mockAuthData, nil)
 
-		service := service.NewAuthService(mockUserRepo, nil, mockAuthRepo, nil, nil, nil)
+		service := service.NewAuthService(mockUserRepo, nil, mockAuthRepo, nil, nil, nil, nil)
 		err := service.ResendVerification(ctx, email)
 
 		assert.ErrorIs(t, err, customerrors.ErrCooldownActive)
@@ -398,7 +392,7 @@ func TestResendVerification(t *testing.T) {
 		mockAuthRepo.On("FindByEmail", ctx, email).Return(mockAuthData, nil)
 		mockUserRepo.On("FindByID", ctx, mockAuthData.UserID).Return(nil, customerrors.ErrDataNotFound)
 
-		service := service.NewAuthService(mockUserRepo, nil, mockAuthRepo, nil, nil, nil)
+		service := service.NewAuthService(mockUserRepo, nil, mockAuthRepo, nil, nil, nil, nil)
 		err := service.ResendVerification(ctx, email)
 
 		assert.ErrorIs(t, err, customerrors.ErrDataNotFound)
@@ -416,7 +410,7 @@ func TestResendVerification(t *testing.T) {
 
 		mockAuthData := &entity.UserVerification{
 			CreatedAt: time.Now().Add(-10 * time.Minute),
-			UserID: userID,
+			UserID:    userID,
 		}
 
 		mockUserData := &entity.User{
@@ -430,7 +424,7 @@ func TestResendVerification(t *testing.T) {
 		mockAuthRepo.On("FindByEmail", ctx, email).Return(mockAuthData, nil)
 		mockUserRepo.On("FindByID", ctx, userID).Return(mockUserData, nil)
 
-		service := service.NewAuthService(mockUserRepo, nil, mockAuthRepo, mockEmail, nil, nil)
+		service := service.NewAuthService(mockUserRepo, nil, mockAuthRepo, mockEmail, nil, nil, nil)
 		err := service.ResendVerification(ctx, email)
 
 		assert.ErrorIs(t, err, customerrors.ErrAccountAlreadyVerified)
@@ -467,12 +461,240 @@ func TestResendVerification(t *testing.T) {
 
 		mockAuthRepo.On("Upsert", ctx, mock.Anything).Return(dbError)
 
-		service := service.NewAuthService(mockUserRepo, nil, mockAuthRepo, mockEmail, dummyCfg, nil)
+		service := service.NewAuthService(mockUserRepo, nil, mockAuthRepo, mockEmail, testingutils.GetDummyConfig(), nil, nil)
 		err := service.ResendVerification(ctx, email)
 
 		assert.ErrorIs(t, err, dbError)
 		mockEmail.AssertNotCalled(t, "SendEmail")
 		mockUserRepo.AssertExpectations(t)
 		mockAuthRepo.AssertExpectations(t)
+	})
+}
+
+// =============================== test login
+func TestLogin(t *testing.T) {
+	// 1. success scneario
+	t.Run("Success - Login User", func(t *testing.T) {
+		ctx := context.Background()
+		emailUsn := "yuriku@mail.com"
+		password := "password123"
+		reqID := "REQ-123"
+		hashedPassword := "hashedpassword"
+
+		mockUser := &entity.User{
+			Username:   "yuriku",
+			Email:      emailUsn,
+			Password:   hashedPassword,
+			Role:       "User",
+			IsVerified: true,
+		}
+		mockUser.ID = "USER-123"
+
+		mockToken := &jwt.TokenPair{
+			AccessToken:  "accessToken",
+			RefreshToken: "refreshToken",
+		}
+
+		mockUserRepo := new(mocks.MockUserRepo)
+		mockHash := new(mocks.MockHashService)
+		mockTokenRepo := new(mocks.MockTokenService)
+
+		mockUserRepo.On("FindByEmailUsername", ctx, emailUsn).Return(mockUser, nil)
+		mockHash.On("ComparePassword", hashedPassword, password).Return(nil)
+		mockUserRepo.On("UpdateRefreshToken", ctx, mockUser.ID, mock.Anything).Return(nil)
+		mockTokenRepo.On("GenerateToken", testingutils.GetDummyConfig(), mockUser.ID, mockUser.Role).Return(mockToken, nil)
+
+		service := service.NewAuthService(mockUserRepo, mockHash, nil, nil, testingutils.GetDummyConfig(), nil, mockTokenRepo)
+		res, err := service.Login(ctx, emailUsn, password, reqID)
+
+		assert.NoError(t, err)
+		assert.NotNil(t, res)
+
+		assert.Equal(t, mockUser.ID, res.User.ID)
+		assert.Equal(t, mockUser.Username, res.User.Username)
+		assert.Equal(t, mockUser.Email, res.User.Email)
+		assert.Equal(t, mockUser.Role, res.User.Role)
+
+		assert.NotEmpty(t, res.AccessToken)
+		assert.NotEmpty(t, res.RefreshToken)
+
+		mockUserRepo.AssertExpectations(t)
+		mockHash.AssertExpectations(t)
+	})
+
+	// 2. failed scenario: user not found
+	t.Run("Failed - User Not Found", func(t *testing.T) {
+		ctx := context.Background()
+		emailUsn := "riku@mail.com"
+		password := "password"
+		reqId := "REQ-123"
+
+		mockUserRepo := new(mocks.MockUserRepo)
+		mockHash := new(mocks.MockHashService)
+
+		mockUserRepo.On("FindByEmailUsername", ctx, emailUsn).Return(nil, customerrors.ErrDataNotFound)
+
+		service := service.NewAuthService(mockUserRepo, mockHash, nil, nil, nil, nil, nil)
+		res, err := service.Login(ctx, emailUsn, password, reqId)
+
+		assert.Error(t, err)
+		assert.ErrorIs(t, err, customerrors.ErrDataNotFound)
+
+		assert.Nil(t, res)
+		mockHash.AssertNotCalled(t, "ComparePassword")
+		mockUserRepo.AssertNotCalled(t, "UpdateRefreshToken")
+		mockUserRepo.AssertExpectations(t)
+		mockHash.AssertExpectations(t)
+	})
+
+	// 3. failed scenario: user not verified
+	t.Run("Failed - User Not Verified", func(t *testing.T) {
+		ctx := context.Background()
+		emailUsn := "riku@mail.com"
+		password := "password"
+		reqId := "REQ-123"
+		hashedPassword := "hashedpassword"
+
+		mockUser := &entity.User{
+			Username:   "yuriku",
+			Email:      emailUsn,
+			Password:   hashedPassword,
+			Role:       "User",
+			IsVerified: false,
+		}
+		mockUser.ID = "USER-123"
+
+		mockUserRepo := new(mocks.MockUserRepo)
+		mockHash := new(mocks.MockHashService)
+
+		mockUserRepo.On("FindByEmailUsername", ctx, emailUsn).Return(mockUser, nil)
+
+		service := service.NewAuthService(mockUserRepo, mockHash, nil, nil, nil, nil, nil)
+		res, err := service.Login(ctx, emailUsn, password, reqId)
+
+		assert.Error(t, err)
+		assert.Nil(t, res)
+		assert.ErrorIs(t, err, customerrors.ErrAccountInactive)
+
+		mockHash.AssertNotCalled(t, "ComparePassword")
+		mockUserRepo.AssertNotCalled(t, "UpdateRefreshToken")
+		mockHash.AssertExpectations(t)
+		mockUserRepo.AssertExpectations(t)
+	})
+
+	// 4. failed scenario: invalid password
+	t.Run("Failed - Invalid Password", func(t *testing.T) {
+		ctx := context.Background()
+		emailUsn := "riku@mail.com"
+		password := "password"
+		reqId := "REQ-123"
+		hashedPassword := "hashedpassword"
+
+		mockUser := &entity.User{
+			Username:   "yuriku",
+			Email:      emailUsn,
+			Password:   hashedPassword,
+			Role:       "User",
+			IsVerified: true,
+		}
+		mockUser.ID = "USER-123"
+
+		mockUserRepo := new(mocks.MockUserRepo)
+		mockHash := new(mocks.MockHashService)
+
+		mockUserRepo.On("FindByEmailUsername", ctx, emailUsn).Return(mockUser, nil)
+		mockHash.On("ComparePassword", hashedPassword, password).Return(customerrors.ErrInvalidPassword)
+
+		service := service.NewAuthService(mockUserRepo, mockHash, nil, nil, nil, nil, nil)
+		res, err := service.Login(ctx, emailUsn, password, reqId)
+
+		assert.Error(t, err)
+		assert.Nil(t, res)
+		assert.ErrorIs(t, err, customerrors.ErrInvalidPassword)
+
+		mockUserRepo.AssertNotCalled(t, "UpdateRefreshToken")
+		mockHash.AssertExpectations(t)
+		mockUserRepo.AssertExpectations(t)
+	})
+
+	// 5. failed scenario: failed to generate token
+	t.Run("Failed - Failed Generate Token", func(t *testing.T) {
+		ctx := context.Background()
+		emailUsn := "riku@mail.com"
+		password := "password"
+		reqId := "REQ-123"
+		hashedPassword := "hashedpassword"
+
+		mockUser := &entity.User{
+			Username:   "yuriku",
+			Email:      emailUsn,
+			Password:   hashedPassword,
+			Role:       "User",
+			IsVerified: true,
+		}
+		mockUser.ID = "USER-123"
+
+		mockUserRepo := new(mocks.MockUserRepo)
+		mockHash := new(mocks.MockHashService)
+		mockToken := new(mocks.MockTokenService)
+		expectedError := errors.New("error token")
+
+		mockUserRepo.On("FindByEmailUsername", ctx, emailUsn).Return(mockUser, nil)
+		mockHash.On("ComparePassword", hashedPassword, password).Return(nil)
+		mockToken.On("GenerateToken", testingutils.GetDummyConfig(), mockUser.ID, mockUser.Role).Return(nil, expectedError)
+
+		service := service.NewAuthService(mockUserRepo, mockHash, nil, nil, testingutils.GetDummyConfig(), nil, mockToken)
+		res, err := service.Login(ctx, emailUsn, password, reqId)
+
+		assert.Error(t, err)
+		assert.Nil(t, res)
+		assert.ErrorIs(t, err, expectedError)
+
+		mockUserRepo.AssertNotCalled(t, "UpdateRefreshToken")
+		mockHash.AssertExpectations(t)
+		mockUserRepo.AssertExpectations(t)
+	})
+
+	// 6. failed scenario: failed to update refresh token
+	t.Run("Failed - Failed Update Refresh Token", func(t *testing.T) {
+		ctx := context.Background()
+		emailUsn := "riku@mail.com"
+		password := "password"
+		reqId := "REQ-123"
+		hashedPassword := "hashedpassword"
+
+		mockUser := &entity.User{
+			Username:   "yuriku",
+			Email:      emailUsn,
+			Password:   hashedPassword,
+			Role:       "User",
+			IsVerified: true,
+		}
+		mockUser.ID = "USER-123"
+
+		mockToken := &jwt.TokenPair{
+			AccessToken:  "accessToken",
+			RefreshToken: "refreshToken",
+		}
+
+		mockUserRepo := new(mocks.MockUserRepo)
+		mockHash := new(mocks.MockHashService)
+		mockTokenRepo := new(mocks.MockTokenService)
+		expectedError := errors.New("error db")
+
+		mockUserRepo.On("FindByEmailUsername", ctx, emailUsn).Return(mockUser, nil)
+		mockHash.On("ComparePassword", hashedPassword, password).Return(nil)
+		mockTokenRepo.On("GenerateToken", testingutils.GetDummyConfig(), mockUser.ID, mockUser.Role).Return(mockToken, nil)
+		mockUserRepo.On("UpdateRefreshToken", ctx, mockUser.ID, mockToken.RefreshToken).Return(expectedError)
+
+		service := service.NewAuthService(mockUserRepo, mockHash, nil, nil, testingutils.GetDummyConfig(), nil, mockTokenRepo)
+		res, err := service.Login(ctx, emailUsn, password, reqId)
+
+		assert.Error(t, err)
+		assert.Nil(t, res)
+		assert.ErrorIs(t, err, expectedError)
+
+		mockHash.AssertExpectations(t)
+		mockUserRepo.AssertExpectations(t)
 	})
 }
