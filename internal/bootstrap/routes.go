@@ -5,7 +5,7 @@ import (
 	_ "be-ayaka/docs"
 	"be-ayaka/internal/delivery/http"
 	"be-ayaka/internal/middleware"
-	"be-ayaka/pkg/generate_id"
+	"be-ayaka/pkg/generateid"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/requestid"
