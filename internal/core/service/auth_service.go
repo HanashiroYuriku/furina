@@ -5,7 +5,7 @@ import (
 	"be-ayaka/internal/core/customerrors"
 	"be-ayaka/internal/core/entity"
 	"be-ayaka/internal/core/port"
-	generateid "be-ayaka/pkg/generate_id"
+	"be-ayaka/pkg/generateid"
 	"be-ayaka/pkg/hash"
 	"be-ayaka/pkg/jwt"
 	"be-ayaka/pkg/logger"
@@ -30,9 +30,10 @@ type authServiceImpl struct {
 	emailAdapter port.EmailSender
 	config       *config.Config
 	txManager    port.TxManager
+	tokenService jwt.TokenService
 }
 
-func NewAuthService(repo port.UserRepository, hashService hash.HashService, authRepo port.UserVerificationRepository, emailAdapter port.EmailSender, cfg *config.Config, txManager port.TxManager) AuthService {
+func NewAuthService(repo port.UserRepository, hashService hash.HashService, authRepo port.UserVerificationRepository, emailAdapter port.EmailSender, cfg *config.Config, txManager port.TxManager, tokenService jwt.TokenService) AuthService {
 	return &authServiceImpl{
 		userRepo:     repo,
 		hashService:  hashService,
@@ -40,6 +41,7 @@ func NewAuthService(repo port.UserRepository, hashService hash.HashService, auth
 		emailAdapter: emailAdapter,
 		config:       cfg,
 		txManager:    txManager,
+		tokenService: tokenService,
 	}
 }
 
@@ -132,7 +134,7 @@ func (s *authServiceImpl) Login(ctx context.Context, emailUsername, password, re
 		return nil, customerrors.ErrInvalidPassword
 	}
 
-	tokens, err := jwt.GenerateToken(s.config, user.ID, user.Role)
+	tokens, err := s.tokenService.GenerateToken(s.config, user.ID, user.Role)
 	if err != nil {
 		return nil, err
 	}
@@ -194,7 +196,7 @@ func (s *authServiceImpl) NewAccessToken(ctx context.Context, refreshToken, requ
 		return nil, err
 	}
 
-	tokens, err := jwt.GenerateToken(s.config, user.ID, user.Role)
+	tokens, err := s.tokenService.GenerateToken(s.config, user.ID, user.Role)
 	if err != nil {
 		return nil, err
 	}
