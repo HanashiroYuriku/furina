@@ -5,7 +5,7 @@ import (
 	"be-ayaka/internal/core/entity"
 	"be-ayaka/internal/core/service"
 	"be-ayaka/pkg/logger"
-	requestid "be-ayaka/pkg/request_id"
+	"be-ayaka/pkg/requestid"
 	"be-ayaka/pkg/response"
 	"be-ayaka/pkg/validator"
 	"fmt"

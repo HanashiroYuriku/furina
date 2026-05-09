@@ -3,7 +3,7 @@ package http
 import (
 	"be-ayaka/config"
 	ayaka "be-ayaka/pkg/logger"
-	"be-ayaka/pkg/request_id"
+	"be-ayaka/pkg/requestid"
 	"time"
 
 	"github.com/gofiber/fiber/v2"

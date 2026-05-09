@@ -6,7 +6,7 @@ import (
 	"be-ayaka/config"
 	customjwt "be-ayaka/pkg/jwt"
 	"be-ayaka/pkg/logger"
-	"be-ayaka/pkg/request_id"
+	"be-ayaka/pkg/requestid"
 	"be-ayaka/pkg/response"
 
 	"github.com/gofiber/fiber/v2"

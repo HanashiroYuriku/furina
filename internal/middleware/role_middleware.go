@@ -1,7 +1,7 @@
 package middleware
 
 import (
-	"be-ayaka/pkg/request_id"
+	"be-ayaka/pkg/requestid"
 	"be-ayaka/pkg/response"
 
 	"github.com/gofiber/fiber/v2"

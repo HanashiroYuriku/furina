@@ -2,7 +2,7 @@ package middleware
 
 import (
 	"be-ayaka/internal/core/customerrors"
-	requestid "be-ayaka/pkg/request_id"
+	"be-ayaka/pkg/requestid"
 	"be-ayaka/pkg/response"
 	"errors"
 
