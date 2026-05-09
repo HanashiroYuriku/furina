@@ -8,6 +8,16 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 )
 
+type TokenService interface {
+	GenerateToken(cfg *config.Config, userID string, role string) (*TokenPair, error)
+}
+
+type jwtService struct{}
+
+func NewTokenService() TokenService {
+	return &jwtService{}
+}
+
 // CustomClaims defines the structure of JWT claims
 type CustomClaims struct {
 	UserID string `json:"userId"`
@@ -21,7 +31,7 @@ type TokenPair struct {
 }
 
 // GenerateToken generates a JWT token for a given user ID and role
-func GenerateToken(cfg *config.Config, userID string, role string) (*TokenPair, error) {
+func (s *jwtService) GenerateToken(cfg *config.Config, userID string, role string) (*TokenPair, error) {
 	// access token
 	accessExp := time.Now().Add(time.Duration(cfg.JWT.Expired) * time.Minute)
 	accessClaims := &CustomClaims{
