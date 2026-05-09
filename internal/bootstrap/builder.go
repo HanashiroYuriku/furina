@@ -8,6 +8,7 @@ import (
 	"be-ayaka/internal/core/service"
 	"be-ayaka/internal/delivery/http"
 	"be-ayaka/pkg/hash"
+	"be-ayaka/pkg/jwt"
 	"be-ayaka/pkg/validator"
 
 	"gorm.io/gorm"
@@ -26,10 +27,12 @@ func BuildAllDependencies(db *gorm.DB, cfg *config.Config) *Handlers {
 		cfg.Email.Pass,
 	)
 
-	// validator
+	// === validator
 	validator := validator.NewGoValidator(db)
-	// tx manager
+	// === tx manager
 	txManager := repository.NewTxManager(db)
+	// === token
+	tokenService := jwt.NewTokenService()
 
 	// === adapter
 	// --- user
@@ -41,7 +44,7 @@ func BuildAllDependencies(db *gorm.DB, cfg *config.Config) *Handlers {
 	// --- user
 	hashService := hash.NewBcryptHash()
 	// --- auth
-	authService := service.NewAuthService(userRepo, hashService, authRepo, emailAdapter, cfg, txManager)
+	authService := service.NewAuthService(userRepo, hashService, authRepo, emailAdapter, cfg, txManager, tokenService)
 
 	return &Handlers{
 		Auth: http.NewAuthHandler(authService, validator),
