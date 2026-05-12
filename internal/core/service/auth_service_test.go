@@ -698,3 +698,154 @@ func TestLogin(t *testing.T) {
 		mockUserRepo.AssertExpectations(t)
 	})
 }
+
+func TestNewAccessToken(t *testing.T) {
+	// 1. success scenario
+	t.Run("Success - Success create new access token", func(t *testing.T) {
+		ctx := context.Background()
+		refreshToken := "REFRESH-123"
+		requestId := "REQ-123"
+
+		mockUser := &entity.User{
+			Role: "user",
+		}
+		mockUser.ID = "USER-123"
+		mockToken := &jwt.TokenPair{
+			AccessToken: "NEW_ACC_TOKEN",
+			RefreshToken: "MEW_REFRESH_TOKEN",
+		}
+
+		mockUserRepo := new(mocks.MockUserRepo)
+		mockTokenService := new(mocks.MockTokenService)
+
+		mockUserRepo.On("FindByRefreshToken", ctx, refreshToken).Return(mockUser, nil)
+		mockTokenService.On("GenerateToken", testingutils.GetDummyConfig(), mockUser.ID, mockUser.Role).Return(mockToken, nil)
+		mockUserRepo.On("UpdateRefreshToken", ctx, mockUser.ID, mockToken.RefreshToken).Return(nil)
+
+		service := service.NewAuthService(mockUserRepo, nil, nil, nil, testingutils.GetDummyConfig(), nil, mockTokenService)
+		res, err := service.NewAccessToken(ctx, refreshToken, requestId)
+
+		assert.NoError(t, err)
+		assert.NotNil(t, res)
+
+		assert.Equal(t, mockToken.AccessToken, res.AccessToken)
+		assert.Equal(t, mockToken.RefreshToken, res.RefreshToken)
+
+		mockUserRepo.AssertExpectations(t)
+		mockTokenService.AssertExpectations(t)
+	})
+
+	// 2. failed scenario: refresh token empty
+	t.Run("Failed - Refresh Token Empty", func(t *testing.T) {
+		ctx := context.Background()
+		refreshToken := ""
+		requestId := "REQ-123"
+
+		mockUserRepo := new(mocks.MockUserRepo)
+		mockTokenService := new(mocks.MockTokenService)
+
+		service := service.NewAuthService(mockUserRepo, nil, nil, nil, testingutils.GetDummyConfig(), nil, mockTokenService)
+		res, err := service.NewAccessToken(ctx, refreshToken, requestId)
+
+		assert.Nil(t, res)
+		assert.Error(t, err)
+		assert.ErrorIs(t, err, customerrors.ErrUnauthorized)
+
+		mockUserRepo.AssertNotCalled(t, "FindByRefreshToken")
+		mockUserRepo.AssertNotCalled(t, "UpdateRefreshToken")
+		mockTokenService.AssertNotCalled(t, "GenerateToken")
+
+		mockUserRepo.AssertExpectations(t)
+		mockTokenService.AssertExpectations(t)
+	})
+
+	// 3. failed scenario: refresh token not found
+	t.Run("Failed - Refresh Token Not Found", func(t *testing.T) {
+		ctx := context.Background()
+		refreshToken := "REFRESH-123"
+		requestId := "REQ-123"
+
+		mockUserRepo := new(mocks.MockUserRepo)
+		mockTokenService := new(mocks.MockTokenService)
+
+		mockUserRepo.On("FindByRefreshToken", ctx, refreshToken).Return(nil, customerrors.ErrInvalidCredentials)
+
+		service := service.NewAuthService(mockUserRepo, nil, nil, nil, testingutils.GetDummyConfig(), nil, mockTokenService)
+		res, err := service.NewAccessToken(ctx, refreshToken, requestId)
+
+		assert.Nil(t, res)
+		assert.Error(t, err)
+		assert.ErrorIs(t, err, customerrors.ErrInvalidCredentials)
+
+		mockTokenService.AssertNotCalled(t, "GenerateToken")
+		mockUserRepo.AssertNotCalled(t, "UpdateRefreshToken")
+
+		mockUserRepo.AssertExpectations(t)
+		mockTokenService.AssertExpectations(t)
+	})
+
+	// 4. failed scenario: failed generate new token
+	t.Run("Failed - Failed Genereate New Token", func(t *testing.T) {
+		ctx := context.Background()
+		refreshToken := "REFRESH-123"
+		requestId := "REQ-123"
+
+		mockUser := &entity.User{
+			Role: "user",
+		}
+		mockUser.ID = "USER-123"
+		expectedErr := errors.New("failed create token")
+
+		mockUserRepo := new(mocks.MockUserRepo)
+		mockTokenService := new(mocks.MockTokenService)
+
+		mockUserRepo.On("FindByRefreshToken", ctx, refreshToken).Return(mockUser, nil)
+		mockTokenService.On("GenerateToken", testingutils.GetDummyConfig(), mockUser.ID, mockUser.Role).Return(nil, expectedErr)
+
+		service := service.NewAuthService(mockUserRepo, nil, nil, nil, testingutils.GetDummyConfig(), nil, mockTokenService)
+		res, err := service.NewAccessToken(ctx, refreshToken, requestId)
+
+		assert.Nil(t, res)
+		assert.Error(t, err)
+		assert.ErrorIs(t, err, expectedErr)
+
+		mockUserRepo.AssertNotCalled(t, "UpdateRefreshToken")
+
+		mockUserRepo.AssertExpectations(t)
+		mockTokenService.AssertExpectations(t)
+	})
+
+	// 5. failed scenario: failed to update/save refrehs token
+	t.Run("Failed - Failed to Update/Save refresh token", func(t *testing.T) {
+		ctx := context.Background()
+		refreshToken := "REFRESH-123"
+		requestId := "REQ-123"
+
+		mockUser := &entity.User{
+			Role: "user",
+		}
+		mockUser.ID = "USER-123"
+		mockToken := &jwt.TokenPair{
+			AccessToken: "NEW_ACC_TOKEN",
+			RefreshToken: "MEW_REFRESH_TOKEN",
+		}
+		expectedErr := errors.New("error db")
+
+		mockUserRepo := new(mocks.MockUserRepo)
+		mockTokenService := new(mocks.MockTokenService)
+
+		mockUserRepo.On("FindByRefreshToken", ctx, refreshToken).Return(mockUser, nil)
+		mockTokenService.On("GenerateToken", testingutils.GetDummyConfig(), mockUser.ID, mockUser.Role).Return(mockToken, nil)
+		mockUserRepo.On("UpdateRefreshToken", ctx, mockUser.ID, mockToken.RefreshToken).Return(expectedErr)
+
+		service := service.NewAuthService(mockUserRepo, nil, nil, nil, testingutils.GetDummyConfig(), nil, mockTokenService)
+		res, err := service.NewAccessToken(ctx, refreshToken, requestId)
+
+		assert.Nil(t, res)
+		assert.Error(t, err)
+		assert.ErrorIs(t, err, expectedErr)
+
+		mockUserRepo.AssertExpectations(t)
+		mockTokenService.AssertExpectations(t)
+	})
+}
