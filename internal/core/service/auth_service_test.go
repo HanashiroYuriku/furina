@@ -5,7 +5,8 @@ import (
 	"be-ayaka/internal/core/entity"
 	"be-ayaka/internal/core/service"
 	"be-ayaka/internal/testingutils"
-	"be-ayaka/internal/testingutils/mocks"
+	mocksRepo "be-ayaka/internal/testingutils/mocks/repository"
+	mocksPkg "be-ayaka/internal/testingutils/mocks/pkg"
 	"be-ayaka/pkg/jwt"
 	"context"
 	"errors"
@@ -36,8 +37,8 @@ func TestVerifyUser(t *testing.T) {
 		mockUserData.ID = userID
 
 		// setup mocking
-		mockAuthRepo := new(mocks.MockUserVerificationRepo)
-		mockUserRepo := new(mocks.MockUserRepo)
+		mockAuthRepo := new(mocksRepo.MockUserVerificationRepo)
+		mockUserRepo := new(mocksRepo.MockUserRepo)
 
 		mockAuthRepo.On("FindByToken", ctx, validToken).Return(mockVerifData, nil)
 		mockUserRepo.On("FindByID", ctx, userID).Return(mockUserData, nil)
@@ -62,8 +63,8 @@ func TestVerifyUser(t *testing.T) {
 			ExpiredAt: time.Now().Add(-1 * time.Hour),
 		}
 
-		mockAuthRepo := new(mocks.MockUserVerificationRepo)
-		mockUserRepo := new(mocks.MockUserRepo)
+		mockAuthRepo := new(mocksRepo.MockUserVerificationRepo)
+		mockUserRepo := new(mocksRepo.MockUserRepo)
 
 		mockAuthRepo.On("FindByToken", ctx, expiredToken).Return(mockVerifData, nil)
 
@@ -79,8 +80,8 @@ func TestVerifyUser(t *testing.T) {
 		ctx := context.Background()
 		notFoundToken := "TOKEN-UNAVAIL"
 
-		mockAuthRepo := new(mocks.MockUserVerificationRepo)
-		MockUserRepo := new(mocks.MockUserRepo)
+		mockAuthRepo := new(mocksRepo.MockUserVerificationRepo)
+		MockUserRepo := new(mocksRepo.MockUserRepo)
 
 		expectedError := customerrors.ErrDataNotFound
 
@@ -108,8 +109,8 @@ func TestVerifyUser(t *testing.T) {
 			ExpiredAt: time.Now().Add(1 * time.Hour),
 		}
 
-		mockAuthRepo := new(mocks.MockUserVerificationRepo)
-		mockUserRepo := new(mocks.MockUserRepo)
+		mockAuthRepo := new(mocksRepo.MockUserVerificationRepo)
+		mockUserRepo := new(mocksRepo.MockUserRepo)
 
 		mockAuthRepo.On("FindByToken", ctx, validToken).Return(mockVerifData, nil)
 
@@ -139,8 +140,8 @@ func TestVerifyUser(t *testing.T) {
 			ExpiredAt: time.Now().Add(1 * time.Hour),
 		}
 
-		mockAuthRepo := new(mocks.MockUserVerificationRepo)
-		mockUserRepo := new(mocks.MockUserRepo)
+		mockAuthRepo := new(mocksRepo.MockUserVerificationRepo)
+		mockUserRepo := new(mocksRepo.MockUserRepo)
 
 		mockAuthRepo.On("FindByToken", ctx, token).Return(mockVerifData, nil)
 
@@ -173,11 +174,11 @@ func TestCreate(t *testing.T) {
 		}
 		hashedPassword := "HASHEDPASSWORD"
 
-		mockHash := new(mocks.MockHashService)
-		mockTx := new(mocks.MockTxManager)
-		mockUserRepo := new(mocks.MockUserRepo)
-		mockAuthRepo := new(mocks.MockUserVerificationRepo)
-		mockEmail := new(mocks.MockEmail)
+		mockHash := new(mocksPkg.MockHashService)
+		mockTx := new(mocksRepo.MockTxManager)
+		mockUserRepo := new(mocksRepo.MockUserRepo)
+		mockAuthRepo := new(mocksRepo.MockUserVerificationRepo)
+		mockEmail := new(mocksPkg.MockEmail)
 
 		mockHash.On("HashPassword", user.Password).Return(hashedPassword, nil)
 		mockTx.On("WithTx", ctx, mock.Anything).Return(nil)
@@ -205,9 +206,9 @@ func TestCreate(t *testing.T) {
 			Email:    "yuriku@mail.com",
 			Password: "password123",
 		}
-		mockHash := new(mocks.MockHashService)
-		mockUserRepo := new(mocks.MockUserRepo)
-		mockTx := new(mocks.MockTxManager)
+		mockHash := new(mocksPkg.MockHashService)
+		mockUserRepo := new(mocksRepo.MockUserRepo)
+		mockTx := new(mocksRepo.MockTxManager)
 
 		expectedError := customerrors.ErrFailHash
 		mockHash.On("HashPassword", user.Password).Return("", expectedError)
@@ -234,10 +235,10 @@ func TestCreate(t *testing.T) {
 		}
 		hashedPassword := "HASHEDPASSWORD"
 
-		mockHash := new(mocks.MockHashService)
-		mockTx := new(mocks.MockTxManager)
-		mockUserRepo := new(mocks.MockUserRepo)
-		mockAuthRepo := new(mocks.MockUserVerificationRepo)
+		mockHash := new(mocksPkg.MockHashService)
+		mockTx := new(mocksRepo.MockTxManager)
+		mockUserRepo := new(mocksRepo.MockUserRepo)
+		mockAuthRepo := new(mocksRepo.MockUserVerificationRepo)
 
 		dbError := errors.New("sql error")
 
@@ -267,11 +268,11 @@ func TestCreate(t *testing.T) {
 		}
 		hashedPassword := "HASHEDPASSWORD"
 
-		mockHash := new(mocks.MockHashService)
-		mockTx := new(mocks.MockTxManager)
-		mockUserRepo := new(mocks.MockUserRepo)
-		mockAuthRepo := new(mocks.MockUserVerificationRepo)
-		mockEmail := new(mocks.MockEmail)
+		mockHash := new(mocksPkg.MockHashService)
+		mockTx := new(mocksRepo.MockTxManager)
+		mockUserRepo := new(mocksRepo.MockUserRepo)
+		mockAuthRepo := new(mocksRepo.MockUserVerificationRepo)
+		mockEmail := new(mocksPkg.MockEmail)
 
 		dbError := errors.New("sql error")
 
@@ -316,9 +317,9 @@ func TestResendVerification(t *testing.T) {
 		}
 		mockUserData.ID = userID
 
-		mockAuthRepo := new(mocks.MockUserVerificationRepo)
-		mockUserRepo := new(mocks.MockUserRepo)
-		mockEmail := new(mocks.MockEmail)
+		mockAuthRepo := new(mocksRepo.MockUserVerificationRepo)
+		mockUserRepo := new(mocksRepo.MockUserRepo)
+		mockEmail := new(mocksPkg.MockEmail)
 
 		mockAuthRepo.On("FindByEmail", ctx, email).Return(mockVerifData, nil)
 		mockUserRepo.On("FindByID", ctx, userID).Return(mockUserData, nil)
@@ -340,8 +341,8 @@ func TestResendVerification(t *testing.T) {
 		ctx := context.Background()
 		email := "yuriku@mail.com"
 
-		mockAuthRepo := new(mocks.MockUserVerificationRepo)
-		mockUserRepo := new(mocks.MockUserRepo)
+		mockAuthRepo := new(mocksRepo.MockUserVerificationRepo)
+		mockUserRepo := new(mocksRepo.MockUserRepo)
 
 		mockAuthRepo.On("FindByEmail", ctx, email).Return(nil, customerrors.ErrDataNotFound)
 
@@ -362,8 +363,8 @@ func TestResendVerification(t *testing.T) {
 			CreatedAt: time.Now().Add(-2 * time.Minute),
 		}
 
-		mockAuthRepo := new(mocks.MockUserVerificationRepo)
-		mockUserRepo := new(mocks.MockUserRepo)
+		mockAuthRepo := new(mocksRepo.MockUserVerificationRepo)
+		mockUserRepo := new(mocksRepo.MockUserRepo)
 
 		mockAuthRepo.On("FindByEmail", ctx, email).Return(mockAuthData, nil)
 
@@ -385,9 +386,9 @@ func TestResendVerification(t *testing.T) {
 			CreatedAt: time.Now().Add(-10 * time.Minute),
 		}
 
-		mockAuthRepo := new(mocks.MockUserVerificationRepo)
-		mockUserRepo := new(mocks.MockUserRepo)
-		mockEmail := new(mocks.MockEmail)
+		mockAuthRepo := new(mocksRepo.MockUserVerificationRepo)
+		mockUserRepo := new(mocksRepo.MockUserRepo)
+		mockEmail := new(mocksPkg.MockEmail)
 
 		mockAuthRepo.On("FindByEmail", ctx, email).Return(mockAuthData, nil)
 		mockUserRepo.On("FindByID", ctx, mockAuthData.UserID).Return(nil, customerrors.ErrDataNotFound)
@@ -417,9 +418,9 @@ func TestResendVerification(t *testing.T) {
 			IsVerified: true,
 		}
 
-		mockAuthRepo := new(mocks.MockUserVerificationRepo)
-		mockUserRepo := new(mocks.MockUserRepo)
-		mockEmail := new(mocks.MockEmail)
+		mockAuthRepo := new(mocksRepo.MockUserVerificationRepo)
+		mockUserRepo := new(mocksRepo.MockUserRepo)
+		mockEmail := new(mocksPkg.MockEmail)
 
 		mockAuthRepo.On("FindByEmail", ctx, email).Return(mockAuthData, nil)
 		mockUserRepo.On("FindByID", ctx, userID).Return(mockUserData, nil)
@@ -450,9 +451,9 @@ func TestResendVerification(t *testing.T) {
 		}
 		mockUserData.ID = userID
 
-		mockAuthRepo := new(mocks.MockUserVerificationRepo)
-		mockUserRepo := new(mocks.MockUserRepo)
-		mockEmail := new(mocks.MockEmail)
+		mockAuthRepo := new(mocksRepo.MockUserVerificationRepo)
+		mockUserRepo := new(mocksRepo.MockUserRepo)
+		mockEmail := new(mocksPkg.MockEmail)
 
 		dbError := errors.New("sql error")
 
@@ -495,9 +496,9 @@ func TestLogin(t *testing.T) {
 			RefreshToken: "refreshToken",
 		}
 
-		mockUserRepo := new(mocks.MockUserRepo)
-		mockHash := new(mocks.MockHashService)
-		mockTokenRepo := new(mocks.MockTokenService)
+		mockUserRepo := new(mocksRepo.MockUserRepo)
+		mockHash := new(mocksPkg.MockHashService)
+		mockTokenRepo := new(mocksPkg.MockTokenService)
 
 		mockUserRepo.On("FindByEmailUsername", ctx, emailUsn).Return(mockUser, nil)
 		mockHash.On("ComparePassword", hashedPassword, password).Return(nil)
@@ -529,8 +530,8 @@ func TestLogin(t *testing.T) {
 		password := "password"
 		reqId := "REQ-123"
 
-		mockUserRepo := new(mocks.MockUserRepo)
-		mockHash := new(mocks.MockHashService)
+		mockUserRepo := new(mocksRepo.MockUserRepo)
+		mockHash := new(mocksPkg.MockHashService)
 
 		mockUserRepo.On("FindByEmailUsername", ctx, emailUsn).Return(nil, customerrors.ErrDataNotFound)
 
@@ -564,8 +565,8 @@ func TestLogin(t *testing.T) {
 		}
 		mockUser.ID = "USER-123"
 
-		mockUserRepo := new(mocks.MockUserRepo)
-		mockHash := new(mocks.MockHashService)
+		mockUserRepo := new(mocksRepo.MockUserRepo)
+		mockHash := new(mocksPkg.MockHashService)
 
 		mockUserRepo.On("FindByEmailUsername", ctx, emailUsn).Return(mockUser, nil)
 
@@ -599,8 +600,8 @@ func TestLogin(t *testing.T) {
 		}
 		mockUser.ID = "USER-123"
 
-		mockUserRepo := new(mocks.MockUserRepo)
-		mockHash := new(mocks.MockHashService)
+		mockUserRepo := new(mocksRepo.MockUserRepo)
+		mockHash := new(mocksPkg.MockHashService)
 
 		mockUserRepo.On("FindByEmailUsername", ctx, emailUsn).Return(mockUser, nil)
 		mockHash.On("ComparePassword", hashedPassword, password).Return(customerrors.ErrInvalidPassword)
@@ -634,9 +635,9 @@ func TestLogin(t *testing.T) {
 		}
 		mockUser.ID = "USER-123"
 
-		mockUserRepo := new(mocks.MockUserRepo)
-		mockHash := new(mocks.MockHashService)
-		mockToken := new(mocks.MockTokenService)
+		mockUserRepo := new(mocksRepo.MockUserRepo)
+		mockHash := new(mocksPkg.MockHashService)
+		mockToken := new(mocksPkg.MockTokenService)
 		expectedError := errors.New("error token")
 
 		mockUserRepo.On("FindByEmailUsername", ctx, emailUsn).Return(mockUser, nil)
@@ -677,9 +678,9 @@ func TestLogin(t *testing.T) {
 			RefreshToken: "refreshToken",
 		}
 
-		mockUserRepo := new(mocks.MockUserRepo)
-		mockHash := new(mocks.MockHashService)
-		mockTokenRepo := new(mocks.MockTokenService)
+		mockUserRepo := new(mocksRepo.MockUserRepo)
+		mockHash := new(mocksPkg.MockHashService)
+		mockTokenRepo := new(mocksPkg.MockTokenService)
 		expectedError := errors.New("error db")
 
 		mockUserRepo.On("FindByEmailUsername", ctx, emailUsn).Return(mockUser, nil)
@@ -715,8 +716,8 @@ func TestNewAccessToken(t *testing.T) {
 			RefreshToken: "MEW_REFRESH_TOKEN",
 		}
 
-		mockUserRepo := new(mocks.MockUserRepo)
-		mockTokenService := new(mocks.MockTokenService)
+		mockUserRepo := new(mocksRepo.MockUserRepo)
+		mockTokenService := new(mocksPkg.MockTokenService)
 
 		mockUserRepo.On("FindByRefreshToken", ctx, refreshToken).Return(mockUser, nil)
 		mockTokenService.On("GenerateToken", testingutils.GetDummyConfig(), mockUser.ID, mockUser.Role).Return(mockToken, nil)
@@ -741,8 +742,8 @@ func TestNewAccessToken(t *testing.T) {
 		refreshToken := ""
 		requestId := "REQ-123"
 
-		mockUserRepo := new(mocks.MockUserRepo)
-		mockTokenService := new(mocks.MockTokenService)
+		mockUserRepo := new(mocksRepo.MockUserRepo)
+		mockTokenService := new(mocksPkg.MockTokenService)
 
 		service := service.NewAuthService(mockUserRepo, nil, nil, nil, testingutils.GetDummyConfig(), nil, mockTokenService)
 		res, err := service.NewAccessToken(ctx, refreshToken, requestId)
@@ -765,8 +766,8 @@ func TestNewAccessToken(t *testing.T) {
 		refreshToken := "REFRESH-123"
 		requestId := "REQ-123"
 
-		mockUserRepo := new(mocks.MockUserRepo)
-		mockTokenService := new(mocks.MockTokenService)
+		mockUserRepo := new(mocksRepo.MockUserRepo)
+		mockTokenService := new(mocksPkg.MockTokenService)
 
 		mockUserRepo.On("FindByRefreshToken", ctx, refreshToken).Return(nil, customerrors.ErrInvalidCredentials)
 
@@ -796,8 +797,8 @@ func TestNewAccessToken(t *testing.T) {
 		mockUser.ID = "USER-123"
 		expectedErr := errors.New("failed create token")
 
-		mockUserRepo := new(mocks.MockUserRepo)
-		mockTokenService := new(mocks.MockTokenService)
+		mockUserRepo := new(mocksRepo.MockUserRepo)
+		mockTokenService := new(mocksPkg.MockTokenService)
 
 		mockUserRepo.On("FindByRefreshToken", ctx, refreshToken).Return(mockUser, nil)
 		mockTokenService.On("GenerateToken", testingutils.GetDummyConfig(), mockUser.ID, mockUser.Role).Return(nil, expectedErr)
@@ -831,8 +832,8 @@ func TestNewAccessToken(t *testing.T) {
 		}
 		expectedErr := errors.New("error db")
 
-		mockUserRepo := new(mocks.MockUserRepo)
-		mockTokenService := new(mocks.MockTokenService)
+		mockUserRepo := new(mocksRepo.MockUserRepo)
+		mockTokenService := new(mocksPkg.MockTokenService)
 
 		mockUserRepo.On("FindByRefreshToken", ctx, refreshToken).Return(mockUser, nil)
 		mockTokenService.On("GenerateToken", testingutils.GetDummyConfig(), mockUser.ID, mockUser.Role).Return(mockToken, nil)
