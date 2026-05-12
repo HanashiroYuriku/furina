@@ -54,6 +54,7 @@ func (s *authServiceImpl) Create(ctx context.Context, user *entity.UserRequest) 
 	userModel := &entity.User{
 		Username: user.Username,
 		Email:    user.Email,
+		DisplayName: user.DisplayName,
 		Password: passwordHash,
 		Role:     "user",
 	}
