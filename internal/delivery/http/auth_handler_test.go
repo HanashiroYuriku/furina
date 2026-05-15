@@ -29,8 +29,8 @@ type AuthHandlerSuite struct {
 
 func (s *AuthHandlerSuite) SetupTest() {
 	s.app = fiber.New(fiber.Config{
-        ErrorHandler: middleware.GlobalErrorHandler, 
-    })
+		ErrorHandler: middleware.GlobalErrorHandler,
+	})
 	s.mockService = new(mocksService.MockAuthService)
 	s.mockValidator = new(mocksPkg.MockValidator)
 	s.handler = httpDelivery.NewAuthHandler(s.mockService, s.mockValidator)
@@ -46,28 +46,26 @@ func TestAuthHandlerSuite(t *testing.T) {
 	suite.Run(t, new(AuthHandlerSuite))
 }
 
-/////////////////// HELPER FUNCTION TO MAKE REQUEST ///////////////////
+// ///////////////// HELPER FUNCTION TO MAKE REQUEST ///////////////////
 func (s *AuthHandlerSuite) makeRequest(method, path string, body interface{}) *http.Request {
-    var bodyReader io.Reader
-    if body != nil {
-        if b, ok := body.([]byte); ok {
-            bodyReader = bytes.NewBuffer(b)
-        } else {
-            marshaled, _ := json.Marshal(body)
-            bodyReader = bytes.NewBuffer(marshaled)
-        }
-    }
+	var bodyReader io.Reader
+	if body != nil {
+		if b, ok := body.([]byte); ok {
+			bodyReader = bytes.NewBuffer(b)
+		} else {
+			marshaled, _ := json.Marshal(body)
+			bodyReader = bytes.NewBuffer(marshaled)
+		}
+	}
 
-    req, _ := http.NewRequest(method, path, bodyReader)
-    req.Host = "localhost"
-    req.Header.Set("Content-Type", "application/json")
-    
-    return req
+	req, _ := http.NewRequest(method, path, bodyReader)
+	req.Host = "localhost"
+	req.Header.Set("Content-Type", "application/json")
+
+	return req
 }
 
-
-
-/////////////////// TEST REGISTER USER ///////////////////
+// ///////////////// TEST REGISTER USER ///////////////////
 // 1. success scenario
 func (s *AuthHandlerSuite) TestRegisterUser_Success() {
 	requestBody := entity.UserRequest{
@@ -141,4 +139,94 @@ func (s *AuthHandlerSuite) TestRegisterUser_Failed_InternalServerError() {
 	s.mockValidator.AssertExpectations(s.T())
 	s.mockService.AssertExpectations(s.T())
 }
+
 /////////////////// TEST REGISTER USER ///////////////////
+
+// ///////////////// TEST LOGIN USER ///////////////////
+// 1. success scenario
+func (s *AuthHandlerSuite) TestLogin_Success() {
+	requestBody := entity.LoginRequest{
+		EmailUsername: "riku",
+		Password:      "P4$$w0rd",
+	}
+
+	mockRes := &entity.LoginResponse{
+		User: entity.UserResponse{
+			Username: "riku",
+		},
+	}
+	mockRes.AccessToken = "aaccess-token"
+	mockRes.RefreshToken = "refresh-token"
+
+	s.mockValidator.On("Validate", mock.Anything, mock.Anything).Return(nil).Once()
+	s.mockService.On("Login", mock.Anything, requestBody.EmailUsername, requestBody.Password, mock.Anything).Return(mockRes, nil).Once()
+
+	req := s.makeRequest("POST", "/api/v1/auth/login", requestBody)
+	res, err := s.app.Test(req)
+
+	s.Require().NoError(err)
+	s.Equal(fiber.StatusOK, res.StatusCode)
+
+	s.mockValidator.AssertExpectations(s.T())
+	s.mockService.AssertExpectations(s.T())
+}
+
+// 2. failed scenario: email or username not found
+func (s *AuthHandlerSuite) TestLogin_Failed_BadRequest() {
+	requestBody := []byte(`{"emailUsername": "riku", "password": "pass"`)
+
+	req := s.makeRequest("POST", "/api/v1/auth/login", requestBody)
+	res, err := s.app.Test(req)
+
+	s.Require().NoError(err)
+	s.Equal(fiber.StatusBadRequest, res.StatusCode)
+
+	s.mockValidator.AssertNotCalled(s.T(), "Validate")
+	s.mockService.AssertNotCalled(s.T(), "Login")
+}
+
+// 3. failed scenario: failed validation
+func (s *AuthHandlerSuite) TestLogin_Failed_ValidationError() {
+	requestBody := entity.LoginRequest{
+		EmailUsername: "",
+		Password:      "P4$$w0rd",
+	}
+
+	expectedErr := customerrors.NewValidationError(
+		`"emailUsername": "emailUsername is required"`,
+	)
+
+	s.mockValidator.On("Validate", mock.Anything, mock.Anything).Return(expectedErr).Once()
+
+	req := s.makeRequest("POST", "/api/v1/auth/login", requestBody)
+	res, err := s.app.Test(req)
+
+	s.Require().NoError(err)
+	s.Equal(fiber.StatusUnprocessableEntity, res.StatusCode)
+
+	s.mockService.AssertNotCalled(s.T(), "Login")
+	s.mockValidator.AssertExpectations(s.T())
+}
+
+// 4. FAILED scenario: internal server error
+func (s *AuthHandlerSuite) TestLogin_Failed_InternalServerError() {
+	requestBody := entity.LoginRequest{
+		EmailUsername: "riku",
+		Password:      "P4$$w0rd",
+	}
+
+	s.mockValidator.On("Validate", mock.Anything, mock.Anything).Return(nil).Once()
+	s.mockService.On("Login", mock.Anything, requestBody.EmailUsername, requestBody.Password, mock.Anything).
+		Return((*entity.LoginResponse)(nil), errors.New("failed to login")).Once()
+
+	req := s.makeRequest("POST", "/api/v1/auth/login", requestBody)
+	res, err := s.app.Test(req)
+
+	s.Require().NoError(err)
+	s.Equal(fiber.StatusInternalServerError, res.StatusCode)
+
+	s.mockValidator.AssertExpectations(s.T())
+	s.mockService.AssertExpectations(s.T())
+}
+  
+/////////////////// TEST LOGIN USER ///////////////////
