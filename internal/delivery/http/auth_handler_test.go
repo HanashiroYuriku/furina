@@ -228,5 +228,82 @@ func (s *AuthHandlerSuite) TestLogin_Failed_InternalServerError() {
 	s.mockValidator.AssertExpectations(s.T())
 	s.mockService.AssertExpectations(s.T())
 }
-  
+
 /////////////////// TEST LOGIN USER ///////////////////
+
+// ///////////////// TEST RESEND VERIFICATION USER ///////////////////
+// 1. success scenario
+func (s *AuthHandlerSuite) TestResendVerification_Success() {
+	requestBody := entity.UserVerificationRequest{
+		Email: "riku@mail.com",
+	}
+
+	s.mockValidator.On("Validate", mock.Anything, mock.Anything).Return(nil).Once()
+	s.mockService.On("ResendVerification", mock.Anything, requestBody.Email).Return(nil).Once()
+
+	req := s.makeRequest("POST", "/api/v1/auth/resend-verification", requestBody)
+	res, err := s.app.Test(req)
+
+	s.Require().NoError(err)
+	s.Equal(fiber.StatusOK, res.StatusCode)
+
+	s.mockValidator.AssertExpectations(s.T())
+	s.mockService.AssertExpectations(s.T())
+}
+
+// 2. failed scenario: bad request
+func (s *AuthHandlerSuite) TestResendVerification_Failed_BadRequest() {
+	requestBody := []byte(`{"email": "riku@mail.com"`)
+
+	req := s.makeRequest("POST", "/api/v1/auth/resend-verification", requestBody)
+	res, err := s.app.Test(req)
+
+	s.Require().NoError(err)
+	s.Equal(fiber.StatusBadRequest, res.StatusCode)
+
+	s.mockValidator.AssertNotCalled(s.T(), "Validate")
+	s.mockService.AssertNotCalled(s.T(), "ResendVerification")
+}
+
+// 3. failed scenario: failed validation
+func (s *AuthHandlerSuite) TestResendVerification_Failed_ValidationError() {
+	requestBody := entity.UserVerificationRequest{
+		Email: "",
+	}
+
+	expectedErr := customerrors.NewValidationError(
+		`"email": "email is required"`,
+	)
+
+	s.mockValidator.On("Validate", mock.Anything, mock.Anything).Return(expectedErr).Once()
+
+	req := s.makeRequest("POST", "/api/v1/auth/resend-verification", requestBody)
+	res, err := s.app.Test(req)
+
+	s.Require().NoError(err)
+	s.Equal(fiber.StatusUnprocessableEntity, res.StatusCode)
+
+	s.mockValidator.AssertExpectations(s.T())
+	s.mockService.AssertNotCalled(s.T(), "ResendVerification")
+}
+
+// 4. failed scenario: internal server error
+func (s *AuthHandlerSuite) TestResendVerification_Failed_InternalServerError() {
+	requestBody := entity.UserVerificationRequest{
+		Email: "riku@mail.com",
+	}
+
+	s.mockValidator.On("Validate", mock.Anything, mock.Anything).Return(nil).Once()
+	s.mockService.On("ResendVerification", mock.Anything, requestBody.Email).Return(errors.New("failed to resend verification")).Once()
+
+	req := s.makeRequest("POST", "/api/v1/auth/resend-verification", requestBody)
+	res, err := s.app.Test(req)
+
+	s.Require().NoError(err)
+	s.Equal(fiber.StatusInternalServerError, res.StatusCode)
+
+	s.mockValidator.AssertExpectations(s.T())
+	s.mockService.AssertExpectations(s.T())
+}
+
+/////////////////// TEST RESEND VERIFICATION USER ///////////////////
