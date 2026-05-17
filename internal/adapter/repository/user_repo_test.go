@@ -9,41 +9,25 @@ import (
 	"context"
 	"testing"
 
-	"github.com/glebarez/sqlite"
 	"github.com/stretchr/testify/suite"
 	"gorm.io/gorm"
 )
 
 type UserRepoSuite struct {
-	suite.Suite
-	db   *gorm.DB
-	repo port.UserRepository
-}
-
-func (s *UserRepoSuite) SetupSuite() {
-	dsn := "file::memory:?cache=shared"
-	db, err := gorm.Open(sqlite.Open(dsn), &gorm.Config{})
-
-	if err != nil {
-		s.T().Fatalf("Failed initiate database RAM: %v", err)
-	}
-	s.db = db
-	s.repo = repository.NewUserRepo(db)
-}
-
-func (s *UserRepoSuite) SetupTest() {
-	s.db.AutoMigrate(&entity.User{})
-}
-
-func (s *UserRepoSuite) TearDownTest() {
-	s.db.Migrator().DropTable(&entity.User{})
+	BaseRepoSuite // Mengembed base suite
+	repo          port.UserRepository
 }
 
 func TestUserRepoSuite(t *testing.T) {
-	suite.Run(t, new(UserRepoSuite))
+	userSuite := &UserRepoSuite{
+		BaseRepoSuite: NewBaseRepoSuite(&entity.User{}),
+	}
+	
+	userSuite.repo = repository.NewUserRepo(userSuite.DB)
+
+	suite.Run(t, userSuite)
 }
 
-// create func testing
 func (s *UserRepoSuite) TestCreate() {
 	ctx := context.Background()
 
@@ -61,14 +45,14 @@ func (s *UserRepoSuite) TestCreate() {
 		s.NoError(err)
 
 		var res entity.User
-		s.db.First(&res, "id = ?", "USER-123")
+		s.DB.First(&res, "id = ?", "USER-123")
 		s.Equal("hanashiroyuriku", res.Username)
 		s.Equal("yuriku@mail.com", res.Email)
 	})
 
 	// success create with tx
 	s.Run("Success - Success Create with tx", func() {
-		tx := s.db.Begin()
+		tx := s.DB.Begin()
 
 		ctxWithTx := context.WithValue(context.Background(), repository.TxKey{}, tx)
 
@@ -84,7 +68,7 @@ func (s *UserRepoSuite) TestCreate() {
 		tx.Rollback()
 
 		var res entity.User
-		errFind := s.db.First(&res, "id = ?", "USER-1").Error
+		errFind := s.DB.First(&res, "id = ?", "USER-1").Error
 		s.Error(errFind)
 		s.Equal(gorm.ErrRecordNotFound, errFind)
 	})
@@ -96,7 +80,7 @@ func (s *UserRepoSuite) TestCreate() {
 			Email:    "test@mail.com",
 		}
 		user1.ID = "U1"
-		s.db.Create(user1)
+		s.DB.Create(user1)
 
 		user2 := &entity.User{
 			Username: "user2",
@@ -119,7 +103,7 @@ func (s *UserRepoSuite) TestFindByEmailUsername() {
 		Email:    "riku@mail.com",
 	}
 	dummy.ID = "USER-001"
-	s.db.Create(dummy)
+	s.DB.Create(dummy)
 
 	// success find by email
 	s.Run("Success - Find by email", func() {
@@ -148,7 +132,7 @@ func (s *UserRepoSuite) TestUpdateRefreshToken() {
 	ctx := context.Background()
 	userId := "USER-001"
 
-	s.db.Create(&entity.User{
+	s.DB.Create(&entity.User{
 		BaseEntity: entity.BaseEntity{
 			ID: userId,
 		},
@@ -163,7 +147,7 @@ func (s *UserRepoSuite) TestUpdateRefreshToken() {
 		s.NoError(err)
 
 		var res entity.User
-		s.db.First(&res, "id = ?", userId)
+		s.DB.First(&res, "id = ?", userId)
 		s.NotNil(res.RefreshToken)
 		s.Equal(newToken, *res.RefreshToken)
 	})
@@ -177,7 +161,7 @@ func (s *UserRepoSuite) TestFindByID() {
 		Email: "riku@mail.com",
 	}
 	dummy.ID = "USER-1"
-	s.db.Create(dummy)
+	s.DB.Create(dummy)
 
 	// success find user
 	s.Run("Success - Success find user", func() {
@@ -204,7 +188,7 @@ func (s *UserRepoSuite) TestFindByRefreshToken() {
 		RefreshToken: testingutils.StringPtr("refreshToken"),
 	}
 	dummy.ID = "USER-1"
-	s.db.Create(dummy)
+	s.DB.Create(dummy)
 
 	// success find refresh token
 	s.Run("Success - Success find refresh token", func() {
@@ -225,7 +209,7 @@ func (s *UserRepoSuite) TestFindByRefreshToken() {
 func (s *UserRepoSuite) TestVerifyUser() {
 	ctx := context.Background()
 	id := "USER-1"
-	s.db.Create(&entity.User{
+	s.DB.Create(&entity.User{
 		BaseEntity: entity.BaseEntity{
 			ID: id,
 		},
@@ -241,7 +225,7 @@ func (s *UserRepoSuite) TestVerifyUser() {
 		s.NoError(err)
 
 		var res entity.User
-		s.db.First(&res, "id = ?", id)
+		s.DB.First(&res, "id = ?", id)
 		s.NotNil(res)
 		s.Equal(res.IsVerified, true)
 	})
