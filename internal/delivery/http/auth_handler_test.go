@@ -307,3 +307,25 @@ func (s *AuthHandlerSuite) TestResendVerification_Failed_InternalServerError() {
 }
 
 /////////////////// TEST RESEND VERIFICATION USER ///////////////////
+
+
+/////////////////// TEST VERIFY EMAIL USER ///////////////////
+func (s *AuthHandlerSuite) TestVerifyEmail_Success() {
+	validToken := "TOKEN-123"
+	
+	path := "/api/v1/auth/verify?token=" + validToken
+
+	s.mockService.On("VerifyUser", mock.Anything, validToken).Return(nil).Once()
+
+	req := s.makeRequest("GET", path, nil)
+	resp, err := s.app.Test(req)
+
+	// Assertions
+	s.Require().NoError(err)
+	s.Equal(fiber.StatusOK, resp.StatusCode)
+
+	s.mockService.AssertExpectations(s.T())
+	
+	s.mockValidator.AssertNotCalled(s.T(), "Validate", mock.Anything, mock.Anything)
+}
+/////////////////// TEST VERIFY EMAIL USER ///////////////////
