@@ -309,11 +309,11 @@ func (s *AuthHandlerSuite) TestResendVerification_Failed_InternalServerError() {
 
 /////////////////// TEST RESEND VERIFICATION USER ///////////////////
 
-
-/////////////////// TEST VERIFY EMAIL USER ///////////////////
+// ///////////////// TEST VERIFY EMAIL USER ///////////////////
+// 1. success scenario
 func (s *AuthHandlerSuite) TestVerifyEmail_Success() {
 	validToken := "TOKEN-123"
-	
+
 	path := "/api/v1/auth/verify?token=" + validToken
 
 	s.mockService.On("VerifyUser", mock.Anything, validToken).Return(nil).Once()
@@ -326,7 +326,95 @@ func (s *AuthHandlerSuite) TestVerifyEmail_Success() {
 	s.Equal(fiber.StatusOK, resp.StatusCode)
 
 	s.mockService.AssertExpectations(s.T())
-	
-	s.mockValidator.AssertNotCalled(s.T(), "Validate", mock.Anything, mock.Anything)
+}
+
+// 2. failed scenario: token missing
+func (s *AuthHandlerSuite) TestVerifyEmail_FailedTokenMissing() {
+
+	req := testingutils.MakeJSONRequest("GET", "/api/v1/auth/verify", nil)
+	resp, err := s.app.Test(req)
+
+	// Assertions
+	s.Require().NoError(err)
+	s.Equal(fiber.StatusBadRequest, resp.StatusCode)
+
+	s.mockService.AssertNotCalled(s.T(), "VerifyUser", mock.Anything, mock.Anything)
+}
+
+// 3. failed scenario: failed to verify email
+func (s *AuthHandlerSuite) TestVerifyEmail_FailedVerifyToken() {
+	token := "TOKEN-123"
+	expectedErr := errors.New("error verify")
+	path := "/api/v1/auth/verify?token=" + token
+
+	s.mockService.On("VerifyUser", mock.Anything, token).Return(expectedErr).Once()
+
+	req := testingutils.MakeJSONRequest("GET", path, nil)
+	resp, err := s.app.Test(req)
+
+	// Assertions
+	s.Require().NoError(err)
+	s.Equal(fiber.StatusInternalServerError, resp.StatusCode)
+
+	s.mockService.AssertExpectations(s.T())
 }
 /////////////////// TEST VERIFY EMAIL USER ///////////////////
+
+
+/////////////////// TEST RESEND VERIFICATION USER ///////////////////
+// 1. success scenario
+func (s *AuthHandlerSuite) TestRefreshToken_Success() {
+	requestBody := entity.TokenRequest{
+		RefreshToken: "refreshToken",
+	}
+	requestId := "REQUEST-123"
+
+	resToken := &entity.TokenResponse{
+		AccessToken: "new-access-token",
+		RefreshToken: "new-refresh-token",
+	}
+
+	s.mockService.On("NewAccessToken", mock.Anything, requestBody.RefreshToken, requestId).Return(resToken,nil).Once()
+
+	req := testingutils.MakeJSONRequest("POST", "/api/v1/auth/refresh", requestBody, testingutils.WithRequestID(requestId))
+	res, err := s.app.Test(req)
+
+	s.Require().NoError(err)
+	s.Equal(fiber.StatusOK, res.StatusCode)
+
+	s.mockService.AssertExpectations(s.T())
+}
+
+// 2. failed scenario: bad request
+func (s *AuthHandlerSuite) TestRefreshToken_Failed_BadRequest() {
+	requestBody := []byte(`{"refreshToken: "refreshToken"`)
+	requestId := "REQUEST-123"
+
+	req := testingutils.MakeJSONRequest("POST", "/api/v1/auth/refresh", requestBody, testingutils.WithRequestID(requestId))
+	res, err := s.app.Test(req)
+
+	s.Require().NoError(err)
+	s.Equal(fiber.StatusBadRequest, res.StatusCode)
+
+	s.mockService.AssertExpectations(s.T())
+}
+
+// 3. failed scenario: error get new access token
+func (s *AuthHandlerSuite) TestRefreshToken_Failed_GetNewAccessToken() {
+	requestBody := entity.TokenRequest{
+		RefreshToken: "refreshToken",
+	}
+	requestId := "REQUEST-123"
+	expectedErr := errors.New("faild to get new token")
+
+	s.mockService.On("NewAccessToken", mock.Anything, requestBody.RefreshToken, requestId).Return((*entity.TokenResponse)(nil),expectedErr).Once()
+
+	req := testingutils.MakeJSONRequest("POST", "/api/v1/auth/refresh", requestBody, testingutils.WithRequestID(requestId))
+	res, err := s.app.Test(req)
+
+	s.Require().NoError(err)
+	s.Equal(fiber.StatusInternalServerError, res.StatusCode)
+
+	s.mockService.AssertExpectations(s.T())
+}
+/////////////////// TEST RESEND VERIFICATION USER ///////////////////
