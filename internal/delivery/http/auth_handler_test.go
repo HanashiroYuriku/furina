@@ -5,6 +5,7 @@ import (
 	"be-ayaka/internal/core/entity"
 	httpDelivery "be-ayaka/internal/delivery/http"
 	"be-ayaka/internal/middleware"
+	"be-ayaka/internal/testingutils"
 	mocksPkg "be-ayaka/internal/testingutils/mocks/pkg"
 	mocksService "be-ayaka/internal/testingutils/mocks/service"
 	"bytes"
@@ -78,7 +79,7 @@ func (s *AuthHandlerSuite) TestRegisterUser_Success() {
 	s.mockValidator.On("Validate", mock.Anything, mock.Anything).Return(nil).Once()
 	s.mockService.On("Create", mock.Anything, mock.Anything).Return(nil).Once()
 
-	resp, err := s.app.Test(s.makeRequest("POST", "/api/v1/auth/register", requestBody))
+	resp, err := s.app.Test(testingutils.MakeJSONRequest("POST", "/api/v1/auth/register", requestBody))
 
 	s.Require().NoError(err)
 	s.Equal(fiber.StatusCreated, resp.StatusCode)
@@ -91,7 +92,7 @@ func (s *AuthHandlerSuite) TestRegisterUser_Success() {
 func (s *AuthHandlerSuite) TestRegisterUser_Failed_BadRequest() {
 	body := []byte(`{"username": "riku", "email": "riku@mail.com"`)
 
-	resp, err := s.app.Test(s.makeRequest("POST", "/api/v1/auth/register", body))
+	resp, err := s.app.Test(testingutils.MakeJSONRequest("POST", "/api/v1/auth/register", body))
 
 	s.Require().NoError(err)
 	s.Equal(fiber.StatusBadRequest, resp.StatusCode)
@@ -111,7 +112,7 @@ func (s *AuthHandlerSuite) TestRegisterUser_Failed_ValidationError() {
 	s.mockValidator.On("Validate", mock.Anything, mock.Anything).
 		Return(expectedErr).Once()
 
-	resp, err := s.app.Test(s.makeRequest("POST", "/api/v1/auth/register", requestBody))
+	resp, err := s.app.Test(testingutils.MakeJSONRequest("POST", "/api/v1/auth/register", requestBody))
 
 	s.Require().NoError(err)
 	s.Equal(fiber.StatusUnprocessableEntity, resp.StatusCode)
@@ -131,7 +132,7 @@ func (s *AuthHandlerSuite) TestRegisterUser_Failed_InternalServerError() {
 	s.mockService.On("Create", mock.Anything, mock.Anything).
 		Return(errors.New("failed to create user")).Once()
 
-	resp, err := s.app.Test(s.makeRequest("POST", "/api/v1/auth/register", requestBody))
+	resp, err := s.app.Test(testingutils.MakeJSONRequest("POST", "/api/v1/auth/register", requestBody))
 
 	s.Require().NoError(err)
 	s.Equal(fiber.StatusInternalServerError, resp.StatusCode)
@@ -161,7 +162,7 @@ func (s *AuthHandlerSuite) TestLogin_Success() {
 	s.mockValidator.On("Validate", mock.Anything, mock.Anything).Return(nil).Once()
 	s.mockService.On("Login", mock.Anything, requestBody.EmailUsername, requestBody.Password, mock.Anything).Return(mockRes, nil).Once()
 
-	req := s.makeRequest("POST", "/api/v1/auth/login", requestBody)
+	req := testingutils.MakeJSONRequest("POST", "/api/v1/auth/login", requestBody)
 	res, err := s.app.Test(req)
 
 	s.Require().NoError(err)
@@ -175,7 +176,7 @@ func (s *AuthHandlerSuite) TestLogin_Success() {
 func (s *AuthHandlerSuite) TestLogin_Failed_BadRequest() {
 	requestBody := []byte(`{"emailUsername": "riku", "password": "pass"`)
 
-	req := s.makeRequest("POST", "/api/v1/auth/login", requestBody)
+	req := testingutils.MakeJSONRequest("POST", "/api/v1/auth/login", requestBody)
 	res, err := s.app.Test(req)
 
 	s.Require().NoError(err)
@@ -198,7 +199,7 @@ func (s *AuthHandlerSuite) TestLogin_Failed_ValidationError() {
 
 	s.mockValidator.On("Validate", mock.Anything, mock.Anything).Return(expectedErr).Once()
 
-	req := s.makeRequest("POST", "/api/v1/auth/login", requestBody)
+	req := testingutils.MakeJSONRequest("POST", "/api/v1/auth/login", requestBody)
 	res, err := s.app.Test(req)
 
 	s.Require().NoError(err)
@@ -219,7 +220,7 @@ func (s *AuthHandlerSuite) TestLogin_Failed_InternalServerError() {
 	s.mockService.On("Login", mock.Anything, requestBody.EmailUsername, requestBody.Password, mock.Anything).
 		Return((*entity.LoginResponse)(nil), errors.New("failed to login")).Once()
 
-	req := s.makeRequest("POST", "/api/v1/auth/login", requestBody)
+	req := testingutils.MakeJSONRequest("POST", "/api/v1/auth/login", requestBody)
 	res, err := s.app.Test(req)
 
 	s.Require().NoError(err)
@@ -241,7 +242,7 @@ func (s *AuthHandlerSuite) TestResendVerification_Success() {
 	s.mockValidator.On("Validate", mock.Anything, mock.Anything).Return(nil).Once()
 	s.mockService.On("ResendVerification", mock.Anything, requestBody.Email).Return(nil).Once()
 
-	req := s.makeRequest("POST", "/api/v1/auth/resend-verification", requestBody)
+	req := testingutils.MakeJSONRequest("POST", "/api/v1/auth/resend-verification", requestBody)
 	res, err := s.app.Test(req)
 
 	s.Require().NoError(err)
@@ -255,7 +256,7 @@ func (s *AuthHandlerSuite) TestResendVerification_Success() {
 func (s *AuthHandlerSuite) TestResendVerification_Failed_BadRequest() {
 	requestBody := []byte(`{"email": "riku@mail.com"`)
 
-	req := s.makeRequest("POST", "/api/v1/auth/resend-verification", requestBody)
+	req := testingutils.MakeJSONRequest("POST", "/api/v1/auth/resend-verification", requestBody)
 	res, err := s.app.Test(req)
 
 	s.Require().NoError(err)
@@ -277,7 +278,7 @@ func (s *AuthHandlerSuite) TestResendVerification_Failed_ValidationError() {
 
 	s.mockValidator.On("Validate", mock.Anything, mock.Anything).Return(expectedErr).Once()
 
-	req := s.makeRequest("POST", "/api/v1/auth/resend-verification", requestBody)
+	req := testingutils.MakeJSONRequest("POST", "/api/v1/auth/resend-verification", requestBody)
 	res, err := s.app.Test(req)
 
 	s.Require().NoError(err)
@@ -296,7 +297,7 @@ func (s *AuthHandlerSuite) TestResendVerification_Failed_InternalServerError() {
 	s.mockValidator.On("Validate", mock.Anything, mock.Anything).Return(nil).Once()
 	s.mockService.On("ResendVerification", mock.Anything, requestBody.Email).Return(errors.New("failed to resend verification")).Once()
 
-	req := s.makeRequest("POST", "/api/v1/auth/resend-verification", requestBody)
+	req := testingutils.MakeJSONRequest("POST", "/api/v1/auth/resend-verification", requestBody)
 	res, err := s.app.Test(req)
 
 	s.Require().NoError(err)
@@ -317,7 +318,7 @@ func (s *AuthHandlerSuite) TestVerifyEmail_Success() {
 
 	s.mockService.On("VerifyUser", mock.Anything, validToken).Return(nil).Once()
 
-	req := s.makeRequest("GET", path, nil)
+	req := testingutils.MakeJSONRequest("GET", path, nil)
 	resp, err := s.app.Test(req)
 
 	// Assertions
