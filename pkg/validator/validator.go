@@ -35,6 +35,10 @@ type ValidationError struct {
 	IsNotFound  bool              `json:"-"`
 }
 
+var (
+	usernameRegex = regexp.MustCompile(`^[a-zA-Z0-9_.-]+$`)
+)
+
 // NewGoValidator creates a new instance of GoValidator with custom validators and messages
 func NewGoValidator(db *gorm.DB) *GoValidator {
 	v := validator.New()
@@ -178,10 +182,25 @@ func (v *GoValidator) complexPasswordValidator(fl validator.FieldLevel) bool {
 	if len(password) < 8 || len(password) > 64 {
 		return false
 	}
-	hasLower := regexp.MustCompile(`[a-z]`).MatchString(password)
-	hasUpper := regexp.MustCompile(`[A-Z]`).MatchString(password)
-	hasNumber := regexp.MustCompile(`[0-9]`).MatchString(password)
-	hasSpecial := regexp.MustCompile(`[!@#$%^&*()_\-+={[}\]|\\:;"'<,>.?/~]`).MatchString(password)
+	var hasLower, hasUpper, hasNumber, hasSpecial bool
+	specialChars := `!@#$%^&*()_-+={[}]| \:;"'<,>.?/~`
+
+	for _, r := range password {
+		switch {
+		case unicode.IsLower(r):
+			hasLower = true
+		case unicode.IsUpper(r):
+			hasUpper = true
+		case unicode.IsDigit(r):
+			hasNumber = true
+		case strings.ContainsRune(specialChars, r):
+			hasSpecial = true
+		}
+
+		if hasLower && hasUpper && hasNumber && hasSpecial {
+			return true
+		}
+	}
 	return hasLower && hasUpper && hasNumber && hasSpecial
 }
 
@@ -194,7 +213,6 @@ func (v *GoValidator) whiteSpaceValidator(fl validator.FieldLevel) bool {
 // username validator
 func (v *GoValidator) usernameValidator(fl validator.FieldLevel) bool {
 	username := fl.Field().String()
-	usernameRegex := regexp.MustCompile(`^[a-zA-Z0-9_.-]+$`)
 
 	return usernameRegex.MatchString(username)
 }
