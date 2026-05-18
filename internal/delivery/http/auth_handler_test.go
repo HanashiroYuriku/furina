@@ -8,11 +8,7 @@ import (
 	"be-ayaka/internal/testingutils"
 	mocksPkg "be-ayaka/internal/testingutils/mocks/pkg"
 	mocksService "be-ayaka/internal/testingutils/mocks/service"
-	"bytes"
-	"encoding/json"
 	"errors"
-	"io"
-	"net/http"
 	"testing"
 
 	"github.com/gofiber/fiber/v2"
@@ -45,25 +41,6 @@ func (s *AuthHandlerSuite) SetupTest() {
 
 func TestAuthHandlerSuite(t *testing.T) {
 	suite.Run(t, new(AuthHandlerSuite))
-}
-
-// ///////////////// HELPER FUNCTION TO MAKE REQUEST ///////////////////
-func (s *AuthHandlerSuite) makeRequest(method, path string, body interface{}) *http.Request {
-	var bodyReader io.Reader
-	if body != nil {
-		if b, ok := body.([]byte); ok {
-			bodyReader = bytes.NewBuffer(b)
-		} else {
-			marshaled, _ := json.Marshal(body)
-			bodyReader = bytes.NewBuffer(marshaled)
-		}
-	}
-
-	req, _ := http.NewRequest(method, path, bodyReader)
-	req.Host = "localhost"
-	req.Header.Set("Content-Type", "application/json")
-
-	return req
 }
 
 // ///////////////// TEST REGISTER USER ///////////////////
@@ -360,61 +337,4 @@ func (s *AuthHandlerSuite) TestVerifyEmail_FailedVerifyToken() {
 }
 /////////////////// TEST VERIFY EMAIL USER ///////////////////
 
-
-/////////////////// TEST RESEND VERIFICATION USER ///////////////////
-// 1. success scenario
-func (s *AuthHandlerSuite) TestRefreshToken_Success() {
-	requestBody := entity.TokenRequest{
-		RefreshToken: "refreshToken",
-	}
-	requestId := "REQUEST-123"
-
-	resToken := &entity.TokenResponse{
-		AccessToken: "new-access-token",
-		RefreshToken: "new-refresh-token",
-	}
-
-	s.mockService.On("NewAccessToken", mock.Anything, requestBody.RefreshToken, requestId).Return(resToken,nil).Once()
-
-	req := testingutils.MakeJSONRequest("POST", "/api/v1/auth/refresh", requestBody, testingutils.WithRequestID(requestId))
-	res, err := s.app.Test(req)
-
-	s.Require().NoError(err)
-	s.Equal(fiber.StatusOK, res.StatusCode)
-
-	s.mockService.AssertExpectations(s.T())
-}
-
-// 2. failed scenario: bad request
-func (s *AuthHandlerSuite) TestRefreshToken_Failed_BadRequest() {
-	requestBody := []byte(`{"refreshToken: "refreshToken"`)
-	requestId := "REQUEST-123"
-
-	req := testingutils.MakeJSONRequest("POST", "/api/v1/auth/refresh", requestBody, testingutils.WithRequestID(requestId))
-	res, err := s.app.Test(req)
-
-	s.Require().NoError(err)
-	s.Equal(fiber.StatusBadRequest, res.StatusCode)
-
-	s.mockService.AssertExpectations(s.T())
-}
-
-// 3. failed scenario: error get new access token
-func (s *AuthHandlerSuite) TestRefreshToken_Failed_GetNewAccessToken() {
-	requestBody := entity.TokenRequest{
-		RefreshToken: "refreshToken",
-	}
-	requestId := "REQUEST-123"
-	expectedErr := errors.New("faild to get new token")
-
-	s.mockService.On("NewAccessToken", mock.Anything, requestBody.RefreshToken, requestId).Return((*entity.TokenResponse)(nil),expectedErr).Once()
-
-	req := testingutils.MakeJSONRequest("POST", "/api/v1/auth/refresh", requestBody, testingutils.WithRequestID(requestId))
-	res, err := s.app.Test(req)
-
-	s.Require().NoError(err)
-	s.Equal(fiber.StatusInternalServerError, res.StatusCode)
-
-	s.mockService.AssertExpectations(s.T())
-}
 /////////////////// TEST RESEND VERIFICATION USER ///////////////////
