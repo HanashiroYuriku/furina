@@ -18,14 +18,15 @@ type UserRepoSuite struct {
 	repo          port.UserRepository
 }
 
-func TestUserRepoSuite(t *testing.T) {
-	userSuite := &UserRepoSuite{
-		BaseRepoSuite: NewBaseRepoSuite(&entity.User{}),
-	}
-	
-	userSuite.repo = repository.NewUserRepo(userSuite.DB)
+func (s *UserRepoSuite) SetupSuite() {
+	s.BaseRepoSuite.SetupSuite()
+	s.repo = repository.NewUserRepo(s.DB)
+}
 
-	suite.Run(t, userSuite)
+func TestUserRepoSuite(t *testing.T) {
+	suite.Run(t, &UserRepoSuite{
+		BaseRepoSuite: NewBaseRepoSuite(&entity.User{}),
+	})
 }
 
 func (s *UserRepoSuite) TestCreate() {
