@@ -29,72 +29,153 @@ func TestUserRepoSuite(t *testing.T) {
 	})
 }
 
-func (s *UserRepoSuite) TestCreate() {
+// =============================================================================
+// TEST CREATE USER
+// =============================================================================
+// 1. success scenario
+func (s *UserRepoSuite) TestCreate_Success() {
 	ctx := context.Background()
+	newUser := &entity.User{
+		Username: "hanashiroyuriku",
+		Email:    "yuriku@mail.com",
+		Password: "hashedpassword",
+	}
+	newUser.ID = "USER-123"
 
-	// success create
-	s.Run("Success - Create User", func() {
-		newUser := &entity.User{
-			Username: "hanashiroyuriku",
-			Email:    "yuriku@mail.com",
-			Password: "hashedpassword",
-		}
-		newUser.ID = "USER-123"
+	err := s.repo.Create(ctx, newUser)
+	s.NoError(err)
 
-		err := s.repo.Create(ctx, newUser)
-
-		s.NoError(err)
-
-		var res entity.User
-		s.DB.First(&res, "id = ?", "USER-123")
-		s.Equal("hanashiroyuriku", res.Username)
-		s.Equal("yuriku@mail.com", res.Email)
-	})
-
-	// success create with tx
-	s.Run("Success - Success Create with tx", func() {
-		tx := s.DB.Begin()
-
-		ctxWithTx := context.WithValue(context.Background(), repository.TxKey{}, tx)
-
-		newUser := &entity.User{
-			Username: "riku",
-			Email: "riku@mail.com",
-		}
-		newUser.ID = "USER-1"
-
-		err := s.repo.Create(ctxWithTx, newUser)
-		s.NoError(err)
-
-		tx.Rollback()
-
-		var res entity.User
-		errFind := s.DB.First(&res, "id = ?", "USER-1").Error
-		s.Error(errFind)
-		s.Equal(gorm.ErrRecordNotFound, errFind)
-	})
-
-	// failed duplicate
-	s.Run("Failed - Duplicate email", func() {
-		user1 := &entity.User{
-			Username: "user1",
-			Email:    "test@mail.com",
-		}
-		user1.ID = "U1"
-		s.DB.Create(user1)
-
-		user2 := &entity.User{
-			Username: "user2",
-			Email:    "test@mail.com",
-		}
-		user2.ID = "U2"
-
-		err := s.repo.Create(ctx, user2)
-
-		s.Error(err)
-		s.Contains(err.Error(), "UNIQUE constraint failed")
-	})
+	var res entity.User
+	s.DB.First(&res, "id = ?", "USER-123")
+	s.Equal("hanashiroyuriku", res.Username)
+	s.Equal("yuriku@mail.com", res.Email)
 }
+
+// 2. success scenario with Tx
+func (s *UserRepoSuite) TestCreate_SuccessWithTx() {
+	tx := s.DB.Begin()
+	ctxWithTx := context.WithValue(context.Background(), repository.TxKey{}, tx)
+
+	newUser := &entity.User{
+		Username: "riku",
+		Email:    "riku@mail.com",
+	}
+	newUser.ID = "USER-1"
+
+	err := s.repo.Create(ctxWithTx, newUser)
+	s.NoError(err)
+
+	tx.Rollback()
+
+	var res entity.User
+	errFind := s.DB.First(&res, "id = ?", "USER-1").Error
+	s.Error(errFind)
+	s.Equal(gorm.ErrRecordNotFound, errFind)
+}
+
+// 3. failed scenario: email duplicate
+func (s *UserRepoSuite) TestCreate_Failed_DuplicateEmail() {
+	ctx := context.Background()
+	
+	user1 := &entity.User{
+		Username: "user1",
+		Email:    "test@mail.com",
+	}
+	user1.ID = "U1"
+	s.DB.Create(user1)
+
+	user2 := &entity.User{
+		Username: "user2",
+		Email:    "test@mail.com",
+	}
+	user2.ID = "U2"
+
+	err := s.repo.Create(ctx, user2)
+	s.Error(err)
+	s.Contains(err.Error(), "UNIQUE constraint failed")
+}
+
+// 4. failed scenario: context canceled
+func (s *UserRepoSuite) TestCreate_Failed_ContextCanceled() {
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel() 
+
+	newUser := &entity.User{
+		Username: "canceled",
+		Email:    "canceled@mail.com",
+	}
+	newUser.ID = "USER-CANCEL"
+
+	err := s.repo.Create(ctx, newUser)
+	s.Error(err)
+}
+
+// =============================================================================
+// TEST UPDATE REFRESH TOKEN
+// =============================================================================
+// 1. success scenario
+func (s *UserRepoSuite) TestUpdateRefreshToken_Success() {
+	ctx := context.Background()
+	userId := "USER-001"
+
+	s.DB.Create(&entity.User{
+		BaseEntity: entity.BaseEntity{ID: userId},
+		Username:   "riku",
+	})
+
+	newToken := "new token"
+	err := s.repo.UpdateRefreshToken(ctx, userId, newToken)
+	s.NoError(err)
+
+	var res entity.User
+	s.DB.First(&res, "id = ?", userId)
+	s.NotNil(res.RefreshToken)
+	s.Equal(newToken, *res.RefreshToken)
+}
+
+// 2. failed scenario: context canceled
+func (s *UserRepoSuite) TestUpdateRefreshToken_Failed_ContextCanceled() {
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+
+	err := s.repo.UpdateRefreshToken(ctx, "USER-001", "some-token")
+	s.Error(err)
+}
+
+// =============================================================================
+// VTEST VERIFY USER
+// =============================================================================
+// 1. success scenario
+func (s *UserRepoSuite) TestVerifyUser_Success() {
+	ctx := context.Background()
+	id := "USER-1"
+	s.DB.Create(&entity.User{
+		BaseEntity: entity.BaseEntity{ID: id},
+		Username:   "riku",
+		Email:      "riku@mail.com",
+		IsVerified: false,
+	})
+	
+	err := s.repo.VerifUser(ctx, id)
+	s.NoError(err)
+
+	var res entity.User
+	s.DB.First(&res, "id = ?", id)
+	s.Equal(true, res.IsVerified)
+}
+
+// 2. failed scenario: context canceled
+func (s *UserRepoSuite) TestVerifyUser_Failed_ContextCanceled() {
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+
+	err := s.repo.VerifUser(ctx, "USER-1")
+	s.Error(err)
+}
+
+// =============================================================================
+// TEST FIND BY EMAIL OR USERNAME
+// =============================================================================
 
 func (s *UserRepoSuite) TestFindByEmailUsername() {
 	ctx := context.Background()
@@ -106,21 +187,21 @@ func (s *UserRepoSuite) TestFindByEmailUsername() {
 	dummy.ID = "USER-001"
 	s.DB.Create(dummy)
 
-	// success find by email
+	// 1. success scenario using email
 	s.Run("Success - Find by email", func() {
 		res, err := s.repo.FindByEmailUsername(ctx, "riku@mail.com")
 		s.NoError(err)
 		s.Equal("riku", res.Username)
 	})
 
-	// success find by username
+	// 2. success scenario using username
 	s.Run("Success - Find by username", func() {
 		res, err := s.repo.FindByEmailUsername(ctx, "riku")
 		s.NoError(err)
 		s.Equal("riku@mail.com", res.Email)
 	})
 
-	// username or email not found
+	// failed scenario: user not found
 	s.Run("Failed - Not found", func() {
 		res, err := s.repo.FindByEmailUsername(ctx, "unknown")
 		s.Error(err)
@@ -129,49 +210,24 @@ func (s *UserRepoSuite) TestFindByEmailUsername() {
 	})
 }
 
-func (s *UserRepoSuite) TestUpdateRefreshToken() {
-	ctx := context.Background()
-	userId := "USER-001"
-
-	s.DB.Create(&entity.User{
-		BaseEntity: entity.BaseEntity{
-			ID: userId,
-		},
-		Username: "riku",
-	})
-
-	// success update refresh token
-	s.Run("Success - Success update refresh token", func() {
-		newToken := "new token"
-		err := s.repo.UpdateRefreshToken(ctx, userId, newToken)
-
-		s.NoError(err)
-
-		var res entity.User
-		s.DB.First(&res, "id = ?", userId)
-		s.NotNil(res.RefreshToken)
-		s.Equal(newToken, *res.RefreshToken)
-	})
-}
-
 func (s *UserRepoSuite) TestFindByID() {
 	ctx := context.Background()
 
 	dummy := &entity.User{
 		Username: "riku",
-		Email: "riku@mail.com",
+		Email:    "riku@mail.com",
 	}
 	dummy.ID = "USER-1"
 	s.DB.Create(dummy)
 
-	// success find user
+	// 1. success scenario
 	s.Run("Success - Success find user", func() {
 		res, err := s.repo.FindByID(ctx, dummy.ID)
 		s.NoError(err)
 		s.Equal("riku", res.Username)
 	})
 
-	// id not found
+	// 2. failed scenario: user not found
 	s.Run("Failed - ID User not found", func() {
 		res, err := s.repo.FindByID(ctx, "unknown")
 		s.Error(err)
@@ -184,50 +240,25 @@ func (s *UserRepoSuite) TestFindByRefreshToken() {
 	ctx := context.Background()
 
 	dummy := &entity.User{
-		Username: "riku",
-		Email: "riku@mail.com",
+		Username:     "riku",
+		Email:        "riku@mail.com",
 		RefreshToken: testingutils.StringPtr("refreshToken"),
 	}
 	dummy.ID = "USER-1"
 	s.DB.Create(dummy)
 
-	// success find refresh token
+	// 1. success scenario
 	s.Run("Success - Success find refresh token", func() {
 		res, err := s.repo.FindByRefreshToken(ctx, *dummy.RefreshToken)
 		s.NoError(err)
 		s.Equal("riku", res.Username)
 	})
 
-	// refresh token not found
+	// 2. failed scenario: refresh token not found
 	s.Run("Failed - Refresh token not found", func() {
 		res, err := s.repo.FindByRefreshToken(ctx, "unknown")
 		s.Error(err)
 		s.Nil(res)
 		s.ErrorIs(err, customerrors.ErrInvalidCredentials)
-	})
-}
-
-func (s *UserRepoSuite) TestVerifyUser() {
-	ctx := context.Background()
-	id := "USER-1"
-	s.DB.Create(&entity.User{
-		BaseEntity: entity.BaseEntity{
-			ID: id,
-		},
-		Username: "riku",
-		Email: "riku@mail.com",
-		IsVerified: false,
-	})
-	
-	// success verify user
-	s.Run("Success - Success Verify user", func ()  {
-		err := s.repo.VerifUser(ctx, id)
-
-		s.NoError(err)
-
-		var res entity.User
-		s.DB.First(&res, "id = ?", id)
-		s.NotNil(res)
-		s.Equal(res.IsVerified, true)
 	})
 }
