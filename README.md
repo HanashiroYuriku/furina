@@ -17,15 +17,30 @@ It implements a strict **Hexagonal Architecture (Ports & Adapters)** utilizing *
 ## 📂 Project Structure
 ```text
 furina/
-├── cmd/api/             # Application entry point
-├── config/              # Environment & App configuration
-├── internal/            
-│   ├── adapter/         # Database implementation (PostgreSQL/GORM)
-│   ├── bootstrap/       # Dependency Injection & Routing
-│   ├── core/            # Business Logic (Entity, Repository Interfaces, Service)
-│   ├── delivery/        # HTTP Transport (Fiber Handlers)
-│   └── middleware/      # JWT Auth & Logger
-└── pkg/                 # Shared utilities (Hash, Validator, Response)
+├── cmd/                   # Application entry point (CLI commands, root.go, server.go)
+├── config/                # Configuration setup (Viper, Godotenv)
+├── internal/              # Private application codebase
+│   ├── adapter/           # Infrastructure layer (Database connections, 3rd party APIs)
+│   │   ├── database/      # Database initialization & driver setup (PostgreSQL)
+│   │   ├── email/         # SMTP implementation for system notifications
+│   │   └── repository/    # GORM implementations (Fulfills core repository contracts)
+│   ├── bootstrap/         # The Wiring (Dependency Injection, App Init, Routes)
+│   ├── core/              # Core Business Logic (The Holy Grail - Framework Agnostic)
+│   │   ├── customerrors/  # Standardized Domain & Application Custom Errors
+│   │   ├── entity/        # Business Rules: Pure Data Structs
+│   │   ├── port/          # Contracts: Inbound (Service) & Outbound (Repository) Interfaces
+│   │   └── service/       # Application Business Rules: Use Cases / Orchestrator
+│   ├── delivery/          # Transport Mechanism (The Receptionist)
+│   │   └── http/          # HTTP Handlers (Fiber controllers: health, user, auth)
+│   ├── middleware/        # HTTP Interceptors (JWT Auth, Role checking, Request ID)
+│   └── testingutils/      # Test fixtures, mock generators, and test suites helpers
+├── logs/                  # Application runtime and error log files
+├── pkg/                   # Reusable, domain-agnostic utilities (Hash, JWT, Logger, Validator)
+├── .env.sample            # Local environment variables template
+├── Dockerfile             # Multi-stage production Docker build recipe
+├── config.yaml            # Configuration mapping with environment variable interpolation
+├── TESTING.md             # Guide for running unit tests, integration tests, and generating coverage
+└── main.go                # Application root executing the cmd command processor
 ```
 
 ## Getting Started
