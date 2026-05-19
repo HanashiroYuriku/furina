@@ -28,7 +28,6 @@ type AuthServiceSuite struct {
 	service       service.AuthService
 }
 
-// SetupTest akan berjalan otomatis sebelum SETIAP skenario test dieksekusi
 func (s *AuthServiceSuite) SetupTest() {
 	s.mockUserRepo = new(mocksRepo.MockUserRepo)
 	s.mockVerifRepo = new(mocksRepo.MockUserVerificationRepo)
@@ -37,7 +36,6 @@ func (s *AuthServiceSuite) SetupTest() {
 	s.mockEmail = new(mocksPkg.MockEmail)
 	s.mockToken = new(mocksPkg.MockTokenService)
 
-	// Inisialisasi service terpusat di sini
 	s.service = service.NewAuthService(
 		s.mockUserRepo,
 		s.mockHash,
@@ -49,7 +47,6 @@ func (s *AuthServiceSuite) SetupTest() {
 	)
 }
 
-// Runner utama untuk menjalankan seluruh isi suite
 func TestAuthServiceSuite(t *testing.T) {
 	suite.Run(t, new(AuthServiceSuite))
 }
