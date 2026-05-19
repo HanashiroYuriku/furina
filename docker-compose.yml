@@ -1,0 +1,36 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: furina_postgres
+    environment:
+      POSTGRES_USER: ${DATABASE_USER}
+      POSTGRES_PASSWORD: ${DATABASE_PASS}
+      POSTGRES_DB: ${DATABASE_NAME}
+    ports:
+      - "${DATABASE_PORT}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - furina_network
+
+  app:
+    build: .
+    container_name: furina_backend
+    ports:
+      - "${SERVER_PORT}:${SERVER_PORT}"
+    env_file:
+      - .env             
+    environment:
+      - DATABASE_HOST=db
+    depends_on:
+      - db
+    networks:
+      - furina_network
+
+volumes:
+  postgres_data:
+
+networks:
+  furina_network:
