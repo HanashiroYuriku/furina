@@ -14,7 +14,7 @@ import (
 )
 
 type UserRepoSuite struct {
-	BaseRepoSuite // Mengembed base suite
+	BaseRepoSuite
 	repo          port.UserRepository
 }
 
