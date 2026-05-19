@@ -210,6 +210,9 @@ func (s *UserRepoSuite) TestFindByEmailUsername() {
 	})
 }
 
+// =============================================================================
+// TEST FIND BY ID
+// =============================================================================
 func (s *UserRepoSuite) TestFindByID() {
 	ctx := context.Background()
 
@@ -236,6 +239,9 @@ func (s *UserRepoSuite) TestFindByID() {
 	})
 }
 
+// =============================================================================
+// TEST FIND BY REFRESH TOKEN
+// =============================================================================
 func (s *UserRepoSuite) TestFindByRefreshToken() {
 	ctx := context.Background()
 
