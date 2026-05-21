@@ -2,8 +2,8 @@ package http_test
 
 import (
 	"be-ayaka/internal/core/customerrors"
-	"be-ayaka/internal/delivery/dto"
 	httpDelivery "be-ayaka/internal/delivery/http"
+	"be-ayaka/internal/delivery/http/dto"
 	"be-ayaka/internal/middleware"
 	"be-ayaka/internal/testingutils"
 	mocksPkg "be-ayaka/internal/testingutils/mocks/pkg"
@@ -335,6 +335,7 @@ func (s *AuthHandlerSuite) TestVerifyEmail_FailedVerifyToken() {
 
 	s.mockService.AssertExpectations(s.T())
 }
+
 /////////////////// TEST VERIFY EMAIL USER ///////////////////
 
 /////////////////// TEST RESEND VERIFICATION USER ///////////////////
