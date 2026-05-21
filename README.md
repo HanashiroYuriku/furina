@@ -17,6 +17,9 @@ It implements a strict **Hexagonal Architecture (Ports & Adapters)** utilizing *
 ## 📂 Project Structure
 ```text
 furina/
+├── .github/               # GitHub Actions workflows
+│   └── workflows/
+│       └── ci.yml         # Automated CI pipeline script
 ├── cmd/                   # Application entry point (CLI commands, root.go, server.go)
 ├── config/                # Configuration setup (Viper, Godotenv)
 ├── internal/              # Private application codebase
@@ -32,12 +35,14 @@ furina/
 │   │   └── service/       # Application Business Rules: Use Cases / Orchestrator
 │   ├── delivery/          # Transport Mechanism (The Receptionist)
 │   │   └── http/          # HTTP Handlers (Fiber controllers: health, user, auth)
+│   │       └── dto/       # Data Transfer Objects (API Request/Response payload structures & validation tags)
 │   ├── middleware/        # HTTP Interceptors (JWT Auth, Role checking, Request ID)
 │   └── testingutils/      # Test fixtures, mock generators, and test suites helpers
 ├── logs/                  # Application runtime and error log files
 ├── pkg/                   # Reusable, domain-agnostic utilities (Hash, JWT, Logger, Validator)
 ├── .env.sample            # Local environment variables template
 ├── Dockerfile             # Multi-stage production Docker build recipe
+├── docker-compose.yml     # Local multi-container orchestration (App + Postgres)
 ├── config.yaml            # Configuration mapping with environment variable interpolation
 ├── TESTING.md             # Guide for running unit tests, integration tests, and generating coverage
 └── main.go                # Application root executing the cmd command processor
