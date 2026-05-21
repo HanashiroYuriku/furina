@@ -5,9 +5,9 @@ import (
 )
 
 var rootCmd = &cobra.Command{
-	Use: "ayaka",
+	Use:   "ayaka",
 	Short: "Ayaka Backend Service",
-	Long: "Ayaka is a backend service for managing various functionalities.",
+	Long:  "Ayaka is a backend service for managing various functionalities.",
 }
 
 func Execute() error {

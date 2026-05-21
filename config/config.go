@@ -46,8 +46,8 @@ type DatabaseConfig struct {
 }
 
 type JwtConfig struct {
-	Secret  string `mapstructure:"secret"`
-	Expired int    `mapstructure:"expired"` // minutes
+	Secret         string `mapstructure:"secret"`
+	Expired        int    `mapstructure:"expired"` // minutes
 	RefreshSecret  string `mapstructure:"refresh_secret"`
 	RefreshExpired int    `mapstructure:"refresh_expired"` // minutes
 }

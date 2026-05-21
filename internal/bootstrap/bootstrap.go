@@ -64,7 +64,7 @@ func Run(cfg *config.Config) {
 }
 
 func logo(port int) {
-    fmt.Printf(`
+	fmt.Printf(`
      ░█▀▀▀ ░█──░█  ░█▀▀█ ─░█─ ░█▄─░█ ░█▀▀█
      ▒█▀▀─ ▒█──▒█  ▒█▄▄▀ ─▒█─ ░█▀█░█ ▒█▄▄█
      ▒█─── ─▀▄▄▄▀─ ▒█─░█ ─▒█─ ░█──▀█ ▒█─▒█

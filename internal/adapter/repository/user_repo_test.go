@@ -15,7 +15,7 @@ import (
 
 type UserRepoSuite struct {
 	BaseRepoSuite
-	repo          port.UserRepository
+	repo port.UserRepository
 }
 
 func (s *UserRepoSuite) SetupSuite() {
@@ -76,7 +76,7 @@ func (s *UserRepoSuite) TestCreate_SuccessWithTx() {
 // 3. failed scenario: email duplicate
 func (s *UserRepoSuite) TestCreate_Failed_DuplicateEmail() {
 	ctx := context.Background()
-	
+
 	user1 := &entity.User{
 		Username: "user1",
 		Email:    "test@mail.com",
@@ -98,7 +98,7 @@ func (s *UserRepoSuite) TestCreate_Failed_DuplicateEmail() {
 // 4. failed scenario: context canceled
 func (s *UserRepoSuite) TestCreate_Failed_ContextCanceled() {
 	ctx, cancel := context.WithCancel(context.Background())
-	cancel() 
+	cancel()
 
 	newUser := &entity.User{
 		Username: "canceled",
@@ -155,7 +155,7 @@ func (s *UserRepoSuite) TestVerifyUser_Success() {
 		Email:      "riku@mail.com",
 		IsVerified: false,
 	})
-	
+
 	err := s.repo.VerifUser(ctx, id)
 	s.NoError(err)
 

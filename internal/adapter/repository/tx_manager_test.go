@@ -64,7 +64,7 @@ func (s *TxManagerSuite) TestWithTx_ForcedRollback() {
 
 		dummyUser := &entity.User{Username: "tx_rollback_user"}
 		dummyUser.ID = "TX-ROLLBACK-123"
-		
+
 		txDB.Create(dummyUser)
 
 		return forcedError
@@ -84,6 +84,6 @@ func (s *TxManagerSuite) TestExtractTx_ReturnDefaultDB() {
 	ctx := context.Background()
 
 	db := repository.ExtractTx(ctx, s.DB)
-	
+
 	s.Equal(s.DB, db)
 }

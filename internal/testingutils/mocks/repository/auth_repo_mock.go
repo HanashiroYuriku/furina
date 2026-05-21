@@ -6,7 +6,6 @@ import (
 	"github.com/stretchr/testify/mock"
 )
 
-
 // Mock user verif repo
 type MockUserVerificationRepo struct {
 	mock.Mock

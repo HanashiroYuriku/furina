@@ -39,8 +39,8 @@ func (s *jwtService) GenerateToken(cfg *config.Config, userID string, role strin
 		Role:   role,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(accessExp),
-			IssuedAt: jwt.NewNumericDate(time.Now()),
-			Issuer: cfg.App.Name,
+			IssuedAt:  jwt.NewNumericDate(time.Now()),
+			Issuer:    cfg.App.Name,
 		},
 	}
 
@@ -56,8 +56,8 @@ func (s *jwtService) GenerateToken(cfg *config.Config, userID string, role strin
 		Role:   role,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(refreshExp),
-			IssuedAt: jwt.NewNumericDate(time.Now()),
-			Issuer: cfg.App.Name,
+			IssuedAt:  jwt.NewNumericDate(time.Now()),
+			Issuer:    cfg.App.Name,
 		},
 	}
 

@@ -71,18 +71,18 @@ func SetUp(cfg *config.Config) {
 func Log(userID string, levelStr string, message string, requestId string) {
 	var level slog.Level
 	messageStr := fmt.Sprintf("[Request ID: %s] %s", requestId, message)
-	
+
 	switch strings.ToUpper(levelStr) {
-		case "DEBUG":
-			level = slog.LevelDebug
-		case "INFO":
-			level = slog.LevelInfo
-		case "WARN":
-			level = slog.LevelWarn
-		case "ERROR":
-			level = slog.LevelError
-		default:
-			level = slog.LevelInfo
+	case "DEBUG":
+		level = slog.LevelDebug
+	case "INFO":
+		level = slog.LevelInfo
+	case "WARN":
+		level = slog.LevelWarn
+	case "ERROR":
+		level = slog.LevelError
+	default:
+		level = slog.LevelInfo
 	}
 
 	// capture caller info

@@ -14,7 +14,7 @@ import (
 var serverCmd = &cobra.Command{
 	Use:     "service",
 	Aliases: []string{"svc"},
-	Short: "Start the Ayaka backend service",
+	Short:   "Start the Ayaka backend service",
 	Run: func(cmd *cobra.Command, args []string) {
 		fmt.Println("🌸 Preparing Ayaka Server...")
 
@@ -23,9 +23,9 @@ var serverCmd = &cobra.Command{
 		if err != nil {
 			log.Fatalf("Failed to load config: %v", err)
 		}
-		
+
 		// Step 2: Set up logger
-		ayaka.SetUp(cfg)	
+		ayaka.SetUp(cfg)
 		ayaka.Log("SYSTEM", "INFO", "Config & Logger Already Loaded", "unknown-request-id")
 
 		// Step 3: Run bootstrap

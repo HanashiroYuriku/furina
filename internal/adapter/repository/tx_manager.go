@@ -20,7 +20,7 @@ func NewTxManager(db *gorm.DB) port.TxManager {
 func (tm *gormTxManager) WithTx(ctx context.Context, fn func(ctx context.Context) error) error {
 	return tm.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		txCtx := context.WithValue(ctx, TxKey{}, tx)
-		return fn(txCtx)		
+		return fn(txCtx)
 	})
 }
 

@@ -93,6 +93,7 @@ func (s *UserVerifRepoSuite) TestUpsert_Failed_ContextCanceled() {
 	// Asersi bahwa harus mengembalikan error (context canceled)
 	s.Error(err)
 }
+
 // =============================================================================
 // UPSERT TESTS
 // =============================================================================
