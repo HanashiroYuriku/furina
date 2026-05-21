@@ -5,7 +5,7 @@ import (
 	"be-ayaka/internal/core/customerrors"
 	"be-ayaka/internal/core/entity"
 	"be-ayaka/internal/core/port"
-	"be-ayaka/internal/delivery/dto"
+	"be-ayaka/internal/delivery/http/dto"
 	"be-ayaka/pkg/generateid"
 	"be-ayaka/pkg/hash"
 	"be-ayaka/pkg/jwt"
@@ -53,11 +53,11 @@ func (s *authServiceImpl) Create(ctx context.Context, user *dto.UserRequest) err
 	}
 
 	userModel := &entity.User{
-		Username: user.Username,
-		Email:    user.Email,
+		Username:    user.Username,
+		Email:       user.Email,
 		DisplayName: user.DisplayName,
-		Password: passwordHash,
-		Role:     "user",
+		Password:    passwordHash,
+		Role:        "user",
 	}
 	userModel.ID = generateid.GenerateID("USER")
 
