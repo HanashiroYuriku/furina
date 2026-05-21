@@ -5,6 +5,7 @@ import (
 	"be-ayaka/internal/core/customerrors"
 	"be-ayaka/internal/core/entity"
 	"be-ayaka/internal/core/port"
+	"be-ayaka/internal/delivery/dto"
 	"be-ayaka/pkg/generateid"
 	"be-ayaka/pkg/hash"
 	"be-ayaka/pkg/jwt"
@@ -16,11 +17,11 @@ import (
 )
 
 type AuthService interface {
-	Create(ctx context.Context, user *entity.UserRequest) error
+	Create(ctx context.Context, user *dto.UserRequest) error
 	ResendVerification(ctx context.Context, email string) error
 	VerifyUser(ctx context.Context, token string) error
-	Login(ctx context.Context, emailUsername, password, requestId string) (*entity.LoginResponse, error)
-	NewAccessToken(ctx context.Context, refreshToken, requestId string) (*entity.TokenResponse, error)
+	Login(ctx context.Context, emailUsername, password, requestId string) (*dto.LoginResponse, error)
+	NewAccessToken(ctx context.Context, refreshToken, requestId string) (*dto.TokenResponse, error)
 }
 
 type authServiceImpl struct {
@@ -45,7 +46,7 @@ func NewAuthService(repo port.UserRepository, hashService hash.HashService, auth
 	}
 }
 
-func (s *authServiceImpl) Create(ctx context.Context, user *entity.UserRequest) error {
+func (s *authServiceImpl) Create(ctx context.Context, user *dto.UserRequest) error {
 	passwordHash, err := s.hashService.HashPassword(user.Password)
 	if err != nil {
 		return customerrors.ErrFailHash
@@ -121,7 +122,7 @@ func (s *authServiceImpl) VerifyUser(ctx context.Context, token string) error {
 	return s.userRepo.VerifUser(ctx, userVerif.UserID)
 }
 
-func (s *authServiceImpl) Login(ctx context.Context, emailUsername, password, requestId string) (*entity.LoginResponse, error) {
+func (s *authServiceImpl) Login(ctx context.Context, emailUsername, password, requestId string) (*dto.LoginResponse, error) {
 	user, err := s.userRepo.FindByEmailUsername(ctx, emailUsername)
 	if err != nil {
 		return nil, err
@@ -146,8 +147,8 @@ func (s *authServiceImpl) Login(ctx context.Context, emailUsername, password, re
 
 	go logger.Log(user.ID, "INFO", fmt.Sprintf("User %s logged in successfully", user.Username), requestId)
 
-	data := &entity.LoginResponse{
-		User: entity.UserResponse{
+	data := &dto.LoginResponse{
+		User: dto.UserResponse{
 			ID:       user.ID,
 			Username: user.Username,
 			Email:    user.Email,
@@ -187,7 +188,7 @@ func (s *authServiceImpl) generateAndSendVerif(ctx context.Context, user *entity
 	return nil
 }
 
-func (s *authServiceImpl) NewAccessToken(ctx context.Context, refreshToken, requestId string) (*entity.TokenResponse, error) {
+func (s *authServiceImpl) NewAccessToken(ctx context.Context, refreshToken, requestId string) (*dto.TokenResponse, error) {
 	if refreshToken == "" {
 		return nil, customerrors.ErrUnauthorized
 	}
@@ -208,7 +209,7 @@ func (s *authServiceImpl) NewAccessToken(ctx context.Context, refreshToken, requ
 
 	go logger.Log(user.ID, "INFO", fmt.Sprintf("User %s create new tokens successfully", user.Username), requestId)
 
-	data := &entity.TokenResponse{
+	data := &dto.TokenResponse{
 		AccessToken:  tokens.AccessToken,
 		RefreshToken: tokens.RefreshToken,
 		ExpiresIn:    int64(s.config.JWT.Expired),

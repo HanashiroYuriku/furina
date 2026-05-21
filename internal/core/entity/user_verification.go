@@ -10,7 +10,3 @@ type UserVerification struct {
 	ExpiredAt time.Time `gorm:"not null"`
 	CreatedAt time.Time
 }
-
-type UserVerificationRequest struct {
-	Email string `json:"email" validate:"required,incolumn=user_verifications->email"`
-}

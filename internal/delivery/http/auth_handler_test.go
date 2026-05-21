@@ -2,7 +2,7 @@ package http_test
 
 import (
 	"be-ayaka/internal/core/customerrors"
-	"be-ayaka/internal/core/entity"
+	"be-ayaka/internal/delivery/dto"
 	httpDelivery "be-ayaka/internal/delivery/http"
 	"be-ayaka/internal/middleware"
 	"be-ayaka/internal/testingutils"
@@ -46,7 +46,7 @@ func TestAuthHandlerSuite(t *testing.T) {
 // ///////////////// TEST REGISTER USER ///////////////////
 // 1. success scenario
 func (s *AuthHandlerSuite) TestRegisterUser_Success() {
-	requestBody := entity.UserRequest{
+	requestBody := dto.UserRequest{
 		Username:    "riku",
 		Email:       "riku@mail.com",
 		DisplayName: "Riku",
@@ -80,7 +80,7 @@ func (s *AuthHandlerSuite) TestRegisterUser_Failed_BadRequest() {
 
 // 3. failed scenario: error validation
 func (s *AuthHandlerSuite) TestRegisterUser_Failed_ValidationError() {
-	requestBody := entity.UserRequest{Username: "ri"}
+	requestBody := dto.UserRequest{Username: "ri"}
 
 	expectedErr := customerrors.NewValidationError(
 		`"username": "username must be at least 3 characters"`,
@@ -100,7 +100,7 @@ func (s *AuthHandlerSuite) TestRegisterUser_Failed_ValidationError() {
 
 // 4. failed scenario: internal server error
 func (s *AuthHandlerSuite) TestRegisterUser_Failed_InternalServerError() {
-	requestBody := entity.UserRequest{
+	requestBody := dto.UserRequest{
 		Username: "riku",
 		Email:    "riku@mail.com",
 	}
@@ -123,13 +123,13 @@ func (s *AuthHandlerSuite) TestRegisterUser_Failed_InternalServerError() {
 // ///////////////// TEST LOGIN USER ///////////////////
 // 1. success scenario
 func (s *AuthHandlerSuite) TestLogin_Success() {
-	requestBody := entity.LoginRequest{
+	requestBody := dto.LoginRequest{
 		EmailUsername: "riku",
 		Password:      "P4$$w0rd",
 	}
 
-	mockRes := &entity.LoginResponse{
-		User: entity.UserResponse{
+	mockRes := &dto.LoginResponse{
+		User: dto.UserResponse{
 			Username: "riku",
 		},
 	}
@@ -165,7 +165,7 @@ func (s *AuthHandlerSuite) TestLogin_Failed_BadRequest() {
 
 // 3. failed scenario: failed validation
 func (s *AuthHandlerSuite) TestLogin_Failed_ValidationError() {
-	requestBody := entity.LoginRequest{
+	requestBody := dto.LoginRequest{
 		EmailUsername: "",
 		Password:      "P4$$w0rd",
 	}
@@ -188,14 +188,14 @@ func (s *AuthHandlerSuite) TestLogin_Failed_ValidationError() {
 
 // 4. FAILED scenario: internal server error
 func (s *AuthHandlerSuite) TestLogin_Failed_InternalServerError() {
-	requestBody := entity.LoginRequest{
+	requestBody := dto.LoginRequest{
 		EmailUsername: "riku",
 		Password:      "P4$$w0rd",
 	}
 
 	s.mockValidator.On("Validate", mock.Anything, mock.Anything).Return(nil).Once()
 	s.mockService.On("Login", mock.Anything, requestBody.EmailUsername, requestBody.Password, mock.Anything).
-		Return((*entity.LoginResponse)(nil), errors.New("failed to login")).Once()
+		Return((*dto.LoginResponse)(nil), errors.New("failed to login")).Once()
 
 	req := testingutils.MakeJSONRequest("POST", "/api/v1/auth/login", requestBody)
 	res, err := s.app.Test(req)
@@ -212,7 +212,7 @@ func (s *AuthHandlerSuite) TestLogin_Failed_InternalServerError() {
 // ///////////////// TEST RESEND VERIFICATION USER ///////////////////
 // 1. success scenario
 func (s *AuthHandlerSuite) TestResendVerification_Success() {
-	requestBody := entity.UserVerificationRequest{
+	requestBody := dto.UserVerificationRequest{
 		Email: "riku@mail.com",
 	}
 
@@ -245,7 +245,7 @@ func (s *AuthHandlerSuite) TestResendVerification_Failed_BadRequest() {
 
 // 3. failed scenario: failed validation
 func (s *AuthHandlerSuite) TestResendVerification_Failed_ValidationError() {
-	requestBody := entity.UserVerificationRequest{
+	requestBody := dto.UserVerificationRequest{
 		Email: "",
 	}
 
@@ -267,7 +267,7 @@ func (s *AuthHandlerSuite) TestResendVerification_Failed_ValidationError() {
 
 // 4. failed scenario: internal server error
 func (s *AuthHandlerSuite) TestResendVerification_Failed_InternalServerError() {
-	requestBody := entity.UserVerificationRequest{
+	requestBody := dto.UserVerificationRequest{
 		Email: "riku@mail.com",
 	}
 

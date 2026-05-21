@@ -4,6 +4,7 @@ import (
 	"be-ayaka/internal/core/customerrors"
 	"be-ayaka/internal/core/entity"
 	"be-ayaka/internal/core/service"
+	"be-ayaka/internal/delivery/dto"
 	"be-ayaka/internal/testingutils"
 	mocksPkg "be-ayaka/internal/testingutils/mocks/pkg"
 	mocksRepo "be-ayaka/internal/testingutils/mocks/repository"
@@ -164,7 +165,7 @@ func (s *AuthServiceSuite) TestVerifyUser_Failed_AccountAlreadyVerified() {
 
 func (s *AuthServiceSuite) TestCreate_Success() {
 	ctx := context.Background()
-	user := &entity.UserRequest{
+	user := &dto.UserRequest{
 		Username: "yuriku",
 		Email:    "yuriku@mail.com",
 		Password: "password123",
@@ -189,7 +190,7 @@ func (s *AuthServiceSuite) TestCreate_Success() {
 
 func (s *AuthServiceSuite) TestCreate_Failed_HashPassword() {
 	ctx := context.Background()
-	user := &entity.UserRequest{
+	user := &dto.UserRequest{
 		Username: "yuriku",
 		Email:    "yuriku@mail.com",
 		Password: "password123",
@@ -207,7 +208,7 @@ func (s *AuthServiceSuite) TestCreate_Failed_HashPassword() {
 
 func (s *AuthServiceSuite) TestCreate_Failed_SaveToUserTable() {
 	ctx := context.Background()
-	user := &entity.UserRequest{
+	user := &dto.UserRequest{
 		Username: "yuriku",
 		Email:    "yuriku@mail.com",
 		Password: "password123",
@@ -230,7 +231,7 @@ func (s *AuthServiceSuite) TestCreate_Failed_SaveToUserTable() {
 
 func (s *AuthServiceSuite) TestCreate_Failed_InsideGenerateAndSendVerif() {
 	ctx := context.Background()
-	user := &entity.UserRequest{
+	user := &dto.UserRequest{
 		Username: "yuriku",
 		Email:    "yuriku@mail.com",
 		Password: "password123",

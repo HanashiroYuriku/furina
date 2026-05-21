@@ -2,8 +2,8 @@ package http
 
 import (
 	"be-ayaka/internal/core/customerrors"
-	"be-ayaka/internal/core/entity"
 	"be-ayaka/internal/core/service"
+	"be-ayaka/internal/delivery/dto"
 	"be-ayaka/pkg/logger"
 	"be-ayaka/pkg/requestid"
 	"be-ayaka/pkg/response"
@@ -31,15 +31,15 @@ func NewAuthHandler(authService service.AuthService, validator validator.Validat
 // @Tags Authentication
 // @Accept json
 // @Produce json
-// @Param request body entity.UserRequest true "Payload Register"
-// @Success 200 {object} response.Response{data=entity.UserResponse}
+// @Param request body dto.UserRequest true "Payload Register"
+// @Success 200 {object} response.Response{data=dto.UserResponse}
 // @Failure 400 {object} response.Response
 // @Failure 422 {object} response.Response "Validation Failed"
 // @Router /api/v1/auth/register [post]
 func (h *AuthHandler) RegisterUser(c *fiber.Ctx) error {
 	requestId := requestid.GetRequestID(c)
 
-	var request entity.UserRequest
+	var request dto.UserRequest
 
 	if err := c.BodyParser(&request); err != nil {
 		go logger.Log("SYSTEM", "ERROR", "Failed to parse request body: "+err.Error(), requestId)
@@ -73,7 +73,7 @@ func (h *AuthHandler) RegisterUser(c *fiber.Ctx) error {
 // @Tags Authentication
 // @Accept json
 // @Produce json
-// @Param request body entity.UserVerificationRequest true "Payload Email Verification"
+// @Param request body dto.UserVerificationRequest true "Payload Email Verification"
 // @Success 200 {object} response.Response{data=nil}
 // @Failure 400 {object} response.Response
 // @Failure 422 {object} response.Response "Validation Failed"
@@ -82,7 +82,7 @@ func (h *AuthHandler) RegisterUser(c *fiber.Ctx) error {
 func (h *AuthHandler) ResendVerification(c *fiber.Ctx) error {
 	requestId := requestid.GetRequestID(c)
 
-	var email entity.UserVerificationRequest
+	var email dto.UserVerificationRequest
 	if err := c.BodyParser(&email); err != nil {
 		go logger.Log("SYSTEM", "ERROR", "Failed to parse request body: "+err.Error(), requestId)
 		return customerrors.ErrBadRequest
@@ -152,7 +152,7 @@ func (h *AuthHandler) VerifyEmail(c *fiber.Ctx) error {
 // @Tags Authentication
 // @Accept json
 // @Produce json
-// @Param request body entity.LoginRequest true "Payload Login"
+// @Param request body dto.LoginRequest true "Payload Login"
 // @Success 200 {object} response.Response
 // @Failure 400 {object} response.Response
 // @Failure 422 {object} response.Response "Validation Failed"
@@ -161,7 +161,7 @@ func (h *AuthHandler) VerifyEmail(c *fiber.Ctx) error {
 func (h *AuthHandler) Login(c *fiber.Ctx) error {
 	requestId := requestid.GetRequestID(c)
 
-	var request entity.LoginRequest
+	var request dto.LoginRequest
 	if err := c.BodyParser(&request); err != nil {
 		go logger.Log("SYSTEM", "ERROR", "Failed to parse request body: "+err.Error(), requestId)
 		return customerrors.ErrBadRequest
@@ -192,7 +192,7 @@ func (h *AuthHandler) Login(c *fiber.Ctx) error {
 // @Tags Authentication
 // @Accept json
 // @Produce json
-// @Param request body entity.TokenRequest true "Payload Token Refresh"
+// @Param request body dto.TokenRequest true "Payload Token Refresh"
 // @Success 200 {object} response.Response
 // @Failure 400 {object} response.Response
 // @Failure 401 {object} response.Response "Unauthorized/Token Expired"
@@ -200,7 +200,7 @@ func (h *AuthHandler) Login(c *fiber.Ctx) error {
 func (h *AuthHandler) RefreshToken(c *fiber.Ctx) error {
 	requestId := requestid.GetRequestID(c)
 
-	var request entity.TokenRequest
+	var request dto.TokenRequest
 	if err := c.BodyParser(&request); err != nil {
 		go logger.Log("SYSTEM", "ERROR", "Failed to parse request body: "+err.Error(), requestId)
 		return customerrors.ErrBadRequest
