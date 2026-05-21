@@ -3,7 +3,7 @@ package http
 import (
 	"be-ayaka/internal/core/customerrors"
 	"be-ayaka/internal/core/service"
-	"be-ayaka/internal/delivery/dto"
+	"be-ayaka/internal/delivery/http/dto"
 	"be-ayaka/pkg/logger"
 	"be-ayaka/pkg/requestid"
 	"be-ayaka/pkg/response"
