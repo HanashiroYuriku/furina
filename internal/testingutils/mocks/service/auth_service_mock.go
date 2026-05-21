@@ -1,7 +1,7 @@
 package mocks
 
 import (
-	"be-ayaka/internal/delivery/dto"
+	"be-ayaka/internal/delivery/http/dto"
 	"context"
 
 	"github.com/stretchr/testify/mock"
