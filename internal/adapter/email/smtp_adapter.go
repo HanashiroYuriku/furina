@@ -33,3 +33,5 @@ func (s *smtpAdapter) SendEmail(to, subject, htmlBody string) error {
 
 	return err
 }
+
+aowkoakwwo
