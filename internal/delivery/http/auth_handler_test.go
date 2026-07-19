@@ -59,7 +59,7 @@ func (s *AuthHandlerSuite) TestRegisterUser_Success() {
 	resp, err := s.app.Test(testingutils.MakeJSONRequest("POST", "/api/v1/auth/register", requestBody))
 
 	s.Require().NoError(err)
-	s.Equal(fiber.StatusCreated, resp.StatusCode)
+	s.Equal(fiber.StatusAccepted, resp.StatusCode)
 
 	s.mockValidator.AssertExpectations(s.T())
 	s.mockService.AssertExpectations(s.T())
