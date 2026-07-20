@@ -37,3 +37,14 @@ jobs:
           SMTP_USER: dummy_user
           SMTP_PASS: dummy_password
         run: go test -v -coverprofile=coverage.txt ./...
+      
+      # 5. Build Application
+      - name: Build Furina
+        run: go build -o furina-app main.go svc
+
+      # 6. Upload
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: furina-binary
+          path: furina-app
