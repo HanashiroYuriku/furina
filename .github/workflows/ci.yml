@@ -1,39 +1,74 @@
-name: Furina Backend CI
+  name: Furina Backend CI
 
-on:
-  push:
-    branches: [ main, master, dev ]
-  pull_request:
-    branches: [ main, master, dev ]
+  on:
+    push:
+      branches: [ main, master, dev ]
+    pull_request:
+      branches: [ main, master, dev ]
 
-jobs:
-  lint-and-test:
-    runs-on: ubuntu-latest
+  jobs:
+    ##### testing
+    lint-and-test:
+      runs-on: ubuntu-latest
 
-    steps:
-      - name: Checkout Code
-        uses: actions/checkout@v4
+      steps:
+        - name: Checkout Code
+          uses: actions/checkout@v4
 
-      # Setup environment Go compiler
-      - name: Set up Go
-        uses: actions/setup-go@v5
-        with:
-          go-version: '1.25' # Match to your Go version
-          cache: true
+        # Setup environment Go compiler
+        - name: Set up Go
+          uses: actions/setup-go@v5
+          with:
+            go-version: '1.25' # Match to your Go version
+            cache: true
 
-      # 3. Download dependencies
-      - name: Install Dependencies
-        run: go mod download
+        # 3. Download dependencies
+        - name: Install Dependencies
+          run: go mod download
 
-      # 4. Run Unit Test
-      - name: Run Unit Tests
-        env:
-          DATABASE_HOST: localhost
-          DATABASE_PORT: 5432
-          DATABASE_USER: postgres
-          DATABASE_PASS: password
-          DATABASE_NAME: ayaka_db
-          SERVER_PORT: 8000
-          SMTP_USER: dummy_user
-          SMTP_PASS: dummy_password
-        run: go test -v -coverprofile=coverage.txt ./...
+        # 4. Run Unit Test
+        - name: Run Unit Tests
+          env:
+            DATABASE_HOST: localhost
+            DATABASE_PORT: 5432
+            DATABASE_USER: postgres
+            DATABASE_PASS: password
+            DATABASE_NAME: ayaka_db
+            SERVER_PORT: 8000
+            SMTP_USER: dummy_user
+            SMTP_PASS: dummy_password
+          run: go test -v -coverprofile=coverage.txt ./...
+
+        
+
+    ###### Deploy
+    deploy:
+      needs: lint-and-test
+      runs-on: ubuntu-latest
+
+      steps:
+        - name: Download Artifacts
+          uses: actions/download-artifact@v4
+          with:
+            name: furina-binary
+
+        - name: Copy to Server
+          uses: appleboy/scp-action@v0.1.7
+          with:
+            host: ${{ secrets.SERVER_HOST }}
+            username: ${{ secrets.SERVER_USER }}
+            key: ${{ secrets.SERVER_SSH_KEY }}
+            port: ${{ secrets.SERVER_PORT }}
+            source: "furina"
+            target: "/home/${{ secrets.SERVER_USER }}/furina"
+
+        - name: Restart Service
+          uses: appleboy/ssh-action@v0.1.3
+          with:
+            host: ${{ secrets.SERVER_HOST }}
+            username: ${{ secrets.SERVER_USER }}
+            key: ${{ secrets.SERVER_SSH_KEY }}
+            port: ${{ secrets.SERVER_PORT }}
+            script: |
+              sudo chmod +x /home/${{ secrets.SERVER_USER }}/furina
+              sudo systemctl restart furina.service
