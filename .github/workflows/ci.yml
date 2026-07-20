@@ -1,8 +1,8 @@
-name: Furina Backend CI
+name: Furina Backend CI/CD
 
 on:
   push:
-    branches: [ main, master, dev, "feature/prodept-poc" ]
+    branches: [ main, master, dev, feature/prodept-poc ]
   pull_request:
     branches: [ main, master, dev ]
 
@@ -18,7 +18,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: '1.25' # Match to your Go version
+          go-version: '1.25.1' # Match to your Go version
           cache: true
 
       # 3. Download dependencies
@@ -37,14 +37,35 @@ jobs:
           SMTP_USER: dummy_user
           SMTP_PASS: dummy_password
         run: go test -v -coverprofile=coverage.txt ./...
-      
-      # 5. Build Application
-      - name: Build Furina
-        run: go build -o furina-app main.go svc
 
-      # 6. Upload
+      # Build
+      - name: Build Application
+        run: go build -o furina main.go
+
+      # Upload Artifacts
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
           name: furina-binary
-          path: furina-app
+          path: furina
+
+      
+
+  ###### Deploy
+  deploy:
+    needs: lint-and-test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Download Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: furina-binary
+
+      - name: Simulasi Pengiriman ke Server
+        run: |
+          echo "✅ Mengambil file 'furina' dari keranjang..."
+          echo "✅ Simulasi SCP: File berhasil dikirim ke server Linux (Virtual)..."
+          echo "✅ Simulasi SSH: Mematikan service lama..."
+          echo "✅ Simulasi SSH: Menyalakan aplikasi Furina yang baru..."
+          echo "🎉 Proses Deploy Selesai dan Sukses!"
